@@ -974,16 +974,14 @@ function populateSelects() {
 }
 
 // ── SCAN HANDLER ──────────────────────────────────────────────────────────────
-async function handleScan(input) {
+function handleScan(input) {
   if (!input.files[0]) return;
   const file = input.files[0];
-  input.value = '';
-
-  const dataUrl = await fileToDataURL(file);
 
   currentReceipt = {
     id: Date.now().toString(),
-    imageDataUrl: dataUrl,
+    imageFile: file,
+    imageDataUrl: null,
     scannedAt: new Date().toISOString(),
     vendor: '',
     date: todayStr(),
@@ -1003,6 +1001,7 @@ async function handleScan(input) {
     notes: '',
   };
 
+  input.value = '';
   openCodeModal(currentReceipt, true);
 }
 
@@ -1014,8 +1013,12 @@ function openCodeModal(receipt, isNew = false) {
   document.getElementById('codeModalTitle').textContent = isNew ? 'New Receipt' : 'Edit Receipt';
   document.getElementById('codeModalSub').textContent = receipt.vendor || 'Review and code this receipt';
 
-  // Image
-  if (receipt.imageDataUrl) {
+  // Image preview
+  if (receipt.imageFile) {
+    const objUrl = URL.createObjectURL(receipt.imageFile);
+    document.getElementById('previewImg').src = objUrl;
+    document.getElementById('previewImgWrap').style.display = 'flex';
+  } else if (receipt.imageDataUrl) {
     document.getElementById('previewImg').src = receipt.imageDataUrl;
     document.getElementById('previewImgWrap').style.display = 'flex';
   } else {
@@ -1132,9 +1135,17 @@ function saveReceipt() {
     if (cc && amt) splits.push({ cc, amt });
   });
 
+  // Get existing image if editing
+  let imageDataUrl = null;
+  if (currentReceipt && currentReceipt.imageFile) {
+    imageDataUrl = null; // stored as file reference only - not persisted as dataURL to avoid size issues
+  } else {
+    imageDataUrl = (receipts.find(r=>r.id===editingId)||{}).imageDataUrl || null;
+  }
+
   const receipt = {
     id: editingId || Date.now().toString(),
-    imageDataUrl: currentReceipt ? currentReceipt.imageDataUrl : (receipts.find(r=>r.id===editingId)||{}).imageDataUrl,
+    imageDataUrl: imageDataUrl,
     scannedAt: currentReceipt ? currentReceipt.scannedAt : new Date().toISOString(),
     aiExtracted: currentReceipt ? currentReceipt.aiExtracted : false,
     vendor,
@@ -1240,7 +1251,7 @@ function renderList() {
 
 function viewImg(id) {
   const r = receipts.find(r=>r.id===id);
-  if (!r||!r.imageDataUrl) return;
+  if (!r||!r.imageDataUrl) { showToast('Image not available — photos are not stored between sessions'); return; }
   document.getElementById('imgModalSrc').src = r.imageDataUrl;
   document.getElementById('imgModal').classList.add('open');
 }
@@ -1278,9 +1289,7 @@ function persist() {
   } catch(e) { console.warn('Storage full'); }
 }
 
-function fileToDataURL(file) {
-  return new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result);r.onerror=rej;r.readAsDataURL(file);});
-}
+
 function todayStr() { return new Date().toISOString().slice(0,10); }
 function formatDate(d) {
   if (!d) return '';
