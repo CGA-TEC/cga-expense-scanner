@@ -661,7 +661,7 @@
   <div class="topbar-logo">
     <span class="topbar-badge">CGA</span>
     <span class="topbar-title">Expense Scanner</span>
-  <span style="color:var(--teal);font-size:10px;font-weight:700;margin-left:6px">v1.2</span>
+  <span style="color:var(--teal);font-size:10px;font-weight:700;margin-left:6px">v1.3</span>
   </div>
   <span class="topbar-count" id="topCount">0 receipts</span>
 </div>
@@ -686,12 +686,12 @@
   </div>
 
   <!-- Scan Button -->
-  <button class="scan-hero" onclick="document.getElementById('cameraInput').click()">
-    <span class="scan-icon">📷</span>
-    <span class="scan-label">Scan Receipt</span>
-    <span class="scan-sub">Tap to take photo or choose file</span>
+  <button class="scan-hero" onclick="openNewReceiptModal()">
+    <span class="scan-icon">🧾</span>
+    <span class="scan-label">Add Receipt</span>
+    <span class="scan-sub">Tap to enter receipt details</span>
   </button>
-  <input type="file" id="cameraInput" accept="image/*" capture="environment" onchange="handleScan(this)">
+  <input type="file" id="cameraInput" accept="image/*" capture="environment" style="display:none">
 
   <!-- Receipt List -->
   <div class="section-label">THIS MONTH'S RECEIPTS</div>
@@ -718,9 +718,9 @@
     <span class="nav-btn-icon">📤</span>
     <span>Export</span>
   </button>
-  <button class="nav-btn nav-btn-primary" onclick="document.getElementById('cameraInput').click()">
-    <span class="nav-btn-icon">📷</span>
-    <span>New Scan</span>
+  <button class="nav-btn nav-btn-primary" onclick="openNewReceiptModal()">
+    <span class="nav-btn-icon">➕</span>
+    <span>Add Receipt</span>
   </button>
   <button class="nav-btn nav-btn-secondary" onclick="showSummaryView()">
     <span class="nav-btn-icon">📊</span>
@@ -755,9 +755,15 @@
       <img id="previewImg" src="" alt="Receipt">
     </div>
 
-    <div class="ai-banner" id="aiBanner">
-      <span class="ai-banner-icon">🧾</span>
-      <span class="ai-banner-text"><strong>Receipt captured</strong> — fill in the details below</span>
+    <!-- Camera attach inside modal -->
+    <div style="display:flex;gap:10px;margin-bottom:16px">
+      <button onclick="document.getElementById('modalCamera').click()" style="flex:1;padding:14px;background:var(--teal-light);color:var(--teal-dark);border:1.5px dashed var(--teal);border-radius:var(--radius-sm);font-family:'DM Sans',sans-serif;font-size:14px;font-weight:600;cursor:pointer" id="cameraAttachBtn">
+        📷 Attach Photo
+      </button>
+      <input type="file" id="modalCamera" accept="image/*" capture="environment" style="display:none" onchange="attachPhoto(this)">
+    </div>
+    <div id="attachedPhotoWrap" style="display:none;margin-bottom:12px;border-radius:10px;overflow:hidden;max-height:180px;text-align:center;background:#eee">
+      <img id="attachedPhoto" style="max-width:100%;max-height:180px;object-fit:contain">
     </div>
 
     <!-- Fields -->
@@ -976,12 +982,24 @@ function populateSelects() {
 
 // ── SCAN HANDLER ──────────────────────────────────────────────────────────────
 function handleScan(input) {
+  openNewReceiptModal();
+}
+
+function attachPhoto(input) {
   if (!input.files[0]) return;
   const file = input.files[0];
+  const url = URL.createObjectURL(file);
+  document.getElementById('attachedPhoto').src = url;
+  document.getElementById('attachedPhotoWrap').style.display = 'block';
+  document.getElementById('cameraAttachBtn').textContent = '📷 Photo Attached ✓';
+  document.getElementById('cameraAttachBtn').style.background = 'var(--teal-light)';
+  if (currentReceipt) currentReceipt.imageFile = file;
+}
 
+function openNewReceiptModal() {
   currentReceipt = {
     id: Date.now().toString(),
-    imageFile: file,
+    imageFile: null,
     imageDataUrl: null,
     scannedAt: new Date().toISOString(),
     vendor: '',
@@ -1001,8 +1019,6 @@ function handleScan(input) {
     splits: [],
     notes: '',
   };
-
-  input.value = '';
   openCodeModal(currentReceipt, true);
 }
 
@@ -1014,17 +1030,8 @@ function openCodeModal(receipt, isNew = false) {
   document.getElementById('codeModalTitle').textContent = isNew ? 'New Receipt' : 'Edit Receipt';
   document.getElementById('codeModalSub').textContent = receipt.vendor || 'Review and code this receipt';
 
-  // Image preview
-  if (receipt.imageFile) {
-    const objUrl = URL.createObjectURL(receipt.imageFile);
-    document.getElementById('previewImg').src = objUrl;
-    document.getElementById('previewImgWrap').style.display = 'flex';
-  } else if (receipt.imageDataUrl) {
-    document.getElementById('previewImg').src = receipt.imageDataUrl;
-    document.getElementById('previewImgWrap').style.display = 'flex';
-  } else {
-    document.getElementById('previewImgWrap').style.display = 'none';
-  }
+  // Image preview - hidden, photo attached separately
+  document.getElementById('previewImgWrap').style.display = 'none';
 
   document.getElementById('aiBanner').style.display = 'flex';
 
@@ -1047,6 +1054,12 @@ function openCodeModal(receipt, isNew = false) {
   document.getElementById('splitSection').style.display = receipt.splits && receipt.splits.length > 0 ? 'block' : 'none';
   document.getElementById('splitRows').innerHTML = '';
   if (receipt.splits) receipt.splits.forEach(s => addSplitRow(s));
+
+  // Reset camera button
+  const camBtn = document.getElementById('cameraAttachBtn');
+  if (camBtn) camBtn.textContent = '📷 Attach Photo';
+  document.getElementById('attachedPhotoWrap').style.display = 'none';
+  document.getElementById('modalCamera').value = '';
 
   updateResponseUI();
   document.getElementById('codeModal').classList.add('open');
