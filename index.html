@@ -755,8 +755,8 @@
     </div>
 
     <div class="ai-banner" id="aiBanner">
-      <span class="ai-banner-icon">🤖</span>
-      <span class="ai-banner-text"><strong>AI extracted</strong> — review and confirm details below</span>
+      <span class="ai-banner-icon">🧾</span>
+      <span class="ai-banner-text"><strong>Receipt captured</strong> — fill in the details below</span>
     </div>
 
     <!-- Fields -->
@@ -979,78 +979,31 @@ async function handleScan(input) {
   const file = input.files[0];
   input.value = '';
 
-  showLoading('Reading receipt with AI...');
+  const dataUrl = await fileToDataURL(file);
 
-  try {
-    const b64 = await fileToBase64(file);
-    const dataUrl = await fileToDataURL(file);
+  currentReceipt = {
+    id: Date.now().toString(),
+    imageDataUrl: dataUrl,
+    scannedAt: new Date().toISOString(),
+    vendor: '',
+    date: todayStr(),
+    amount: '',
+    items: '',
+    usedfor: '',
+    aiExtracted: false,
+    coded: false,
+    isResponse: false,
+    account: '',
+    costCenter: '',
+    busSeg: '',
+    jobNum: '',
+    spillAccount: '',
+    bc: '05',
+    splits: [],
+    notes: '',
+  };
 
-    // Call Claude API to extract receipt data
-    const extracted = await extractReceiptAI(b64, file.type);
-
-    currentReceipt = {
-      id: Date.now().toString(),
-      imageDataUrl: dataUrl,
-      scannedAt: new Date().toISOString(),
-      vendor: extracted.vendor || '',
-      date: extracted.date || todayStr(),
-      amount: extracted.amount || '',
-      items: extracted.items || '',
-      usedfor: extracted.usedfor || '',
-      aiExtracted: true,
-      coded: false,
-      isResponse: false,
-      account: '',
-      costCenter: '',
-      busSeg: '',
-      jobNum: '',
-      spillAccount: '',
-      bc: '05',
-      splits: [],
-      notes: '',
-    };
-
-    hideLoading();
-    openCodeModal(currentReceipt, true);
-
-  } catch(e) {
-    hideLoading();
-    // Still open modal with empty fields if AI fails
-    currentReceipt = {
-      id: Date.now().toString(),
-      imageDataUrl: null,
-      scannedAt: new Date().toISOString(),
-      vendor: '', date: todayStr(), amount: '', items: '', usedfor: '',
-      aiExtracted: false, coded: false, isResponse: false,
-      account: '', costCenter: '', busSeg: '',
-      jobNum: '', spillAccount: '', bc: '05',
-      splits: [], notes: '',
-    };
-    openCodeModal(currentReceipt, true);
-    showToast('AI read failed — enter details manually');
-  }
-}
-
-async function extractReceiptAI(b64, mediaType) {
-  const resp = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      model: 'claude-sonnet-4-20250514',
-      max_tokens: 1000,
-      messages: [{
-        role: 'user',
-        content: [
-          { type: 'image', source: { type: 'base64', media_type: mediaType, data: b64 } },
-          { type: 'text', text: `Extract receipt data. Respond ONLY with valid JSON, no markdown:
-{"vendor":"store name","date":"YYYY-MM-DD","amount":"number only no $","items":"what was purchased e.g. Truck Fuel","usedfor":"business reason or product description"}` }
-        ]
-      }]
-    })
-  });
-  const data = await resp.json();
-  const raw = data.content?.find(b => b.type === 'text')?.text || '{}';
-  return JSON.parse(raw.replace(/\`\`\`json|\`\`\`/g,'').trim());
+  openCodeModal(currentReceipt, true);
 }
 
 // ── CODE MODAL ────────────────────────────────────────────────────────────────
@@ -1069,7 +1022,7 @@ function openCodeModal(receipt, isNew = false) {
     document.getElementById('previewImgWrap').style.display = 'none';
   }
 
-  document.getElementById('aiBanner').style.display = receipt.aiExtracted ? 'flex' : 'none';
+  document.getElementById('aiBanner').style.display = 'flex';
 
   // Fields
   document.getElementById('f_vendor').value = receipt.vendor || '';
@@ -1324,9 +1277,7 @@ function persist() {
     localStorage.setItem('cga_receipts', JSON.stringify(receipts.map(r=>Object.assign({},r,{imageDataUrl:null}))));
   } catch(e) { console.warn('Storage full'); }
 }
-function fileToBase64(file) {
-  return new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result.split(',')[1]);r.onerror=rej;r.readAsDataURL(file);});
-}
+
 function fileToDataURL(file) {
   return new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result);r.onerror=rej;r.readAsDataURL(file);});
 }
