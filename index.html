@@ -7,6 +7,9 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="CGA Expenses">
 <title>CGA Expense Scanner</title>
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
 :root {
@@ -101,7 +104,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--navy);color:var(--black);
 <div class="topbar">
   <div class="topbar-logo">
     <span class="topbar-badge">CGA</span>
-    <span class="topbar-title">Expense Scanner <span class="version">v1.5</span></span>
+    <span class="topbar-title">Expense Scanner <span class="version">v1.6</span></span>
   </div>
   <span class="topbar-count" id="topCount">0 receipts</span>
 </div>
@@ -263,6 +266,12 @@ body{font-family:'DM Sans',sans-serif;background:var(--navy);color:var(--black);
           <option value="14">14 — Vessel Fuel and Lube</option>
         </select>
       </div>
+      <div class="field-group">
+        <label class="field-label">Billing Code</label>
+        <select class="field-select" id="f_bc_regular">
+          <option value="50">50 — Internal Project</option>
+        </select>
+      </div>
     </div>
 
     <!-- Response fields -->
@@ -291,8 +300,8 @@ body{font-family:'DM Sans',sans-serif;background:var(--navy);color:var(--black);
       <div class="field-group">
         <label class="field-label">Billing Code</label>
         <select class="field-select" id="f_bc">
-          <option value="05">05 — Non-Billable</option>
-          <option value="10">10 — Billable With Markup</option>
+          <option value="05">05 — Non-Billable Activity</option>
+          <option value="10">10 — Billable Activities</option>
         </select>
       </div>
     </div>
@@ -359,6 +368,7 @@ function openEdit(id) {
   document.getElementById('f_cc').value = r.cc || '';
   document.getElementById('f_seg').value = r.seg || '';
   document.getElementById('f_job').value = r.job || '';
+  if (document.getElementById('f_bc_regular')) document.getElementById('f_bc_regular').value = r.bc || '50';
   document.getElementById('f_spill').value = r.spill || '';
   document.getElementById('f_bc').value = r.bc || '05';
   document.getElementById('f_notes').value = r.notes || '';
@@ -437,7 +447,7 @@ function saveReceipt() {
     seg: isResponse ? '' : document.getElementById('f_seg').value,
     job: isResponse ? document.getElementById('f_job').value.trim() : '',
     spill: isResponse ? document.getElementById('f_spill').value : '',
-    bc: isResponse ? document.getElementById('f_bc').value : '',
+    bc: isResponse ? document.getElementById('f_bc').value : document.getElementById('f_bc_regular').value,
     notes: document.getElementById('f_notes').value.trim()
   };
 
