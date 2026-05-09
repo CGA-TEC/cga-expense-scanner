@@ -777,8 +777,12 @@
     </div>
 
     <div class="field-group">
-      <label class="field-label">Items / Purpose</label>
-      <input class="field-input" id="f_purpose" type="text" placeholder="e.g. Truck Fuel - Fuel Card Not Working">
+      <label class="field-label">Items</label>
+      <input class="field-input" id="f_items" type="text" placeholder="e.g. Truck Fuel, Oil Change, Monthly Service">
+    </div>
+    <div class="field-group">
+      <label class="field-label">To be used for</label>
+      <input class="field-input" id="f_usedfor" type="text" placeholder="e.g. Fuel Card Not Working, Training Dept Sound System">
     </div>
 
     <!-- Response Toggle -->
@@ -991,7 +995,8 @@ async function handleScan(input) {
       vendor: extracted.vendor || '',
       date: extracted.date || todayStr(),
       amount: extracted.amount || '',
-      purpose: extracted.purpose || '',
+      items: extracted.items || '',
+      usedfor: extracted.usedfor || '',
       aiExtracted: true,
       coded: false,
       isResponse: false,
@@ -1015,7 +1020,7 @@ async function handleScan(input) {
       id: Date.now().toString(),
       imageDataUrl: null,
       scannedAt: new Date().toISOString(),
-      vendor: '', date: todayStr(), amount: '', purpose: '',
+      vendor: '', date: todayStr(), amount: '', items: '', usedfor: '',
       aiExtracted: false, coded: false, isResponse: false,
       account: '', costCenter: '', busSeg: '',
       jobNum: '', spillAccount: '', bc: '05',
@@ -1038,7 +1043,7 @@ async function extractReceiptAI(b64, mediaType) {
         content: [
           { type: 'image', source: { type: 'base64', media_type: mediaType, data: b64 } },
           { type: 'text', text: `Extract receipt data. Respond ONLY with valid JSON, no markdown:
-{"vendor":"store name","date":"YYYY-MM-DD","amount":"number only no $","purpose":"brief description of what was purchased"}` }
+{"vendor":"store name","date":"YYYY-MM-DD","amount":"number only no $","items":"what was purchased e.g. Truck Fuel","usedfor":"business reason or product description"}` }
         ]
       }]
     })
@@ -1070,7 +1075,8 @@ function openCodeModal(receipt, isNew = false) {
   document.getElementById('f_vendor').value = receipt.vendor || '';
   document.getElementById('f_date').value = receipt.date || todayStr();
   document.getElementById('f_amount').value = receipt.amount || '';
-  document.getElementById('f_purpose').value = receipt.purpose || '';
+  document.getElementById('f_items').value = receipt.items || '';
+  document.getElementById('f_usedfor').value = receipt.usedfor || '';
   document.getElementById('f_account').value = receipt.account || '';
   document.getElementById('f_costcenter').value = receipt.costCenter || '';
   document.getElementById('f_busseg').value = receipt.busSeg || '';
@@ -1181,7 +1187,8 @@ function saveReceipt() {
     vendor,
     date: document.getElementById('f_date').value,
     amount,
-    purpose: document.getElementById('f_purpose').value.trim(),
+    items: document.getElementById('f_items').value.trim(),
+    usedfor: document.getElementById('f_usedfor').value.trim(),
     isResponse,
     coded: true,
     account: isResponse ? '' : document.getElementById('f_account').value,
@@ -1225,7 +1232,8 @@ function renderList() {
   let filtered = query ? receipts.filter(r =>
     (r.vendor||'').toLowerCase().includes(query) ||
     (r.amount||'').toString().includes(query) ||
-    (r.purpose||'').toLowerCase().includes(query)
+    (r.items||'').toLowerCase().includes(query) ||
+    (r.usedfor||'').toLowerCase().includes(query)
   ) : receipts;
 
   document.getElementById('topCount').textContent = receipts.length + ' receipt' + (receipts.length!==1?'s':'');
@@ -1267,7 +1275,7 @@ function renderList() {
       +'<span class="receipt-date">'+formatDate(r.date)+'</span>'
       +tags.join('')
       +'</div>'
-      +(r.purpose?'<div style="font-size:12px;color:var(--gray);margin-top:6px">'+r.purpose+'</div>':'')
+      +(r.items?'<div style="font-size:12px;color:var(--gray);margin-top:4px">'+r.items+(r.usedfor?' — '+r.usedfor:'')+'</div>':'')
       +(r.coded?'<div style="font-size:11px;color:var(--teal-dark);margin-top:4px;font-family:'DM Mono',monospace">'+acctLabel+'</div>':'')
       +'<div class="receipt-card-footer">'
       +(r.imageDataUrl?'<button class="btn-sm btn-view" onclick="viewImg(''+r.id+'')">View</button>':'')
@@ -1287,6 +1295,7 @@ function closeImgModal() { document.getElementById('imgModal').classList.remove(
 
 function exportData() {
   if (receipts.length===0) { showToast('No receipts to export'); return; }
+  // Save to iCloud Drive: after download, open Files app → move to iCloud Drive/CGA Expenses/
   const exportObj = {
     exportedAt: new Date().toISOString(),
     cardHolder: 'Chris DeMaskey',
@@ -1296,9 +1305,9 @@ function exportData() {
   const blob = new Blob([JSON.stringify(exportObj,null,2)], {type:'application/json'});
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
-  a.href=url; a.download='CGA_Receipts_'+new Date().toISOString().slice(0,10)+'.json'; a.click();
+  a.href=url; a.download='CGA_Receipts_'+new Date().toISOString().slice(0,7)+'.json'; a.click();
   URL.revokeObjectURL(url);
-  showToast('Exported ' + receipts.length + ' receipts');
+  showToast('Saved! Move file to iCloud Drive/CGA Expenses/');
 }
 
 function showSummaryView() {
