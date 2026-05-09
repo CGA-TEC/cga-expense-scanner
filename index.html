@@ -34,7 +34,7 @@
   * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
 
   body {
-    font-family: 'DM Sans', sans-serif;
+    font-family: sans-serif, sans-serif;
     background: var(--navy);
     color: var(--black);
     min-height: 100vh;
@@ -230,7 +230,7 @@
     padding: 8px;
     border-radius: 8px;
     border: none;
-    font-family: 'DM Sans', sans-serif;
+    font-family: sans-serif, sans-serif;
     font-size: 13px;
     font-weight: 600;
     cursor: pointer;
@@ -299,7 +299,7 @@
     padding: 14px 16px;
     border: 1.5px solid #E5EBF0;
     border-radius: var(--radius-sm);
-    font-family: 'DM Sans', sans-serif;
+    font-family: sans-serif, sans-serif;
     font-size: 15px;
     color: var(--black);
     background: var(--gray-light);
@@ -316,7 +316,7 @@
     padding: 14px 16px;
     border: 1.5px solid #E5EBF0;
     border-radius: var(--radius-sm);
-    font-family: 'DM Sans', sans-serif;
+    font-family: sans-serif, sans-serif;
     font-size: 15px;
     color: var(--black);
     background: var(--gray-light);
@@ -408,7 +408,7 @@
     color: var(--teal-dark);
     border: 1.5px dashed var(--teal-mid);
     border-radius: var(--radius-sm);
-    font-family: 'DM Sans', sans-serif;
+    font-family: sans-serif, sans-serif;
     font-size: 14px;
     font-weight: 600;
     cursor: pointer;
@@ -455,7 +455,7 @@
     color: white;
     border: none;
     border-radius: var(--radius);
-    font-family: 'DM Sans', sans-serif;
+    font-family: sans-serif, sans-serif;
     font-size: 16px;
     font-weight: 700;
     cursor: pointer;
@@ -532,7 +532,7 @@
     padding: 12px;
     border-radius: 12px;
     border: none;
-    font-family: 'DM Sans', sans-serif;
+    font-family: sans-serif, sans-serif;
     font-size: 13px;
     font-weight: 600;
     cursor: pointer;
@@ -646,7 +646,7 @@
     flex: 1;
     border: none;
     background: transparent;
-    font-family: 'DM Sans', sans-serif;
+    font-family: sans-serif, sans-serif;
     font-size: 15px;
     color: var(--black);
     outline: none;
@@ -661,7 +661,7 @@
   <div class="topbar-logo">
     <span class="topbar-badge">CGA</span>
     <span class="topbar-title">Expense Scanner</span>
-  <span style="color:var(--teal);font-size:10px;font-weight:700;margin-left:6px">v1.3</span>
+  <span style="color:var(--teal);font-size:10px;font-weight:700;margin-left:6px">v1.4</span>
   </div>
   <span class="topbar-count" id="topCount">0 receipts</span>
 </div>
@@ -757,7 +757,7 @@
 
     <!-- Camera attach inside modal -->
     <div style="display:flex;gap:10px;margin-bottom:16px">
-      <button onclick="document.getElementById('modalCamera').click()" style="flex:1;padding:14px;background:var(--teal-light);color:var(--teal-dark);border:1.5px dashed var(--teal);border-radius:var(--radius-sm);font-family:'DM Sans',sans-serif;font-size:14px;font-weight:600;cursor:pointer" id="cameraAttachBtn">
+      <button onclick="document.getElementById('modalCamera').click()" style="flex:1;padding:14px;background:var(--teal-light);color:var(--teal-dark);border:1.5px dashed var(--teal);border-radius:var(--radius-sm);font-family:sans-serif;font-size:14px;font-weight:600;cursor:pointer" id="cameraAttachBtn">
         📷 Attach Photo
       </button>
       <input type="file" id="modalCamera" accept="image/*" capture="environment" style="display:none" onchange="attachPhoto(this)">
@@ -880,7 +880,7 @@
     </div>
 
     <button class="btn-save" id="saveBtn" onclick="saveReceipt()">Save Receipt</button>
-    <button onclick="closeCodeModal()" style="width:100%;padding:14px;background:none;border:none;font-family:'DM Sans',sans-serif;font-size:15px;color:var(--gray);cursor:pointer;margin-top:8px">Cancel</button>
+    <button onclick="closeCodeModal()" style="width:100%;padding:14px;background:none;border:none;font-family:sans-serif;font-size:15px;color:var(--gray);cursor:pointer;margin-top:8px">Cancel</button>
   </div>
 </div>
 
@@ -1254,21 +1254,24 @@ function renderList() {
       +tags.join('')
       +'</div>'
       +(r.items?'<div style="font-size:12px;color:var(--gray);margin-top:4px">'+r.items+(r.usedfor?' — '+r.usedfor:'')+'</div>':'')
-      +(r.coded?'<div style="font-size:11px;color:var(--teal-dark);margin-top:4px;font-family:'DM Mono',monospace">'+acctLabel+'</div>':'')
+      +(r.coded?'<div style="font-size:11px;color:var(--teal-dark);margin-top:4px;font-family:monospace">'+acctLabel+'</div>':'')
       +'<div class="receipt-card-footer">'
-      +(r.imageDataUrl?'<button class="btn-sm btn-view" onclick="viewImg(''+r.id+'')">View</button>':'')
-      +'<button class="btn-sm btn-code" onclick="editReceipt(''+r.id+'')">'+(r.coded?'Edit':'Code')+'</button>'
-      +'<button class="btn-sm btn-delete" onclick="deleteReceipt(''+r.id+'')">Delete</button>'
+      +(r.imageDataUrl?'<button class="btn-sm btn-view" onclick="viewImg(this)" data-id="'+r.id+'">View</button>':'')
+      +'<button class="btn-sm btn-code" onclick="editReceiptBtn(this)" data-id="'+r.id+'">'+(r.coded?'Edit':'Code')+'</button>'
+      +'<button class="btn-sm btn-delete" onclick="deleteReceiptBtn(this)" data-id="'+r.id+'">Delete</button>'
       +'</div></div>';
   }).join('');
 }
 
-function viewImg(id) {
+function viewImg(btn) {
+  const id = btn.dataset ? btn.dataset.id : btn;
   const r = receipts.find(r=>r.id===id);
-  if (!r||!r.imageDataUrl) { showToast('Image not available — photos are not stored between sessions'); return; }
+  if (!r||!r.imageDataUrl) { showToast('Image not available'); return; }
   document.getElementById('imgModalSrc').src = r.imageDataUrl;
   document.getElementById('imgModal').classList.add('open');
 }
+function editReceiptBtn(btn) { editReceipt(btn.dataset.id); }
+function deleteReceiptBtn(btn) { deleteReceipt(btn.dataset.id); }
 function closeImgModal() { document.getElementById('imgModal').classList.remove('open'); }
 
 function exportData() {
