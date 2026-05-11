@@ -16,6 +16,12 @@ exports.handler = async function(event) {
   }
 
   try {
+    const body = JSON.parse(event.body);
+    
+    // Log what we received for debugging
+    console.log('Model:', body.model);
+    console.log('Messages count:', body.messages ? body.messages.length : 0);
+    
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
@@ -23,20 +29,23 @@ exports.handler = async function(event) {
         'x-api-key': process.env.ANTHROPIC_API_KEY,
         'anthropic-version': '2023-06-01'
       },
-      body: event.body
+      body: JSON.stringify(body)
     });
 
-    const data = await response.json();
+    const text = await response.text();
+    console.log('Anthropic status:', response.status);
+    console.log('Anthropic response preview:', text.slice(0, 200));
 
     return {
-      statusCode: 200,
+      statusCode: response.status,
       headers: {
         'Access-Control-Allow-Origin': '*',
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify(data)
+      body: text
     };
   } catch(e) {
+    console.error('Function error:', e.message);
     return {
       statusCode: 500,
       headers: { 'Access-Control-Allow-Origin': '*' },
