@@ -574,18 +574,23 @@ function renderList(){
     document.getElementById('sumResponse').textContent=receipts.filter(function(r){return r.isResponse;}).length;
   }
   if(count===0){list.innerHTML='<div class="empty-state"><div class="empty-icon">🧾</div><div class="empty-title">No receipts yet</div><div class="empty-sub">Tap Scan Receipt to get started</div></div>';return;}
-  list.innerHTML=receipts.map(function(r){
-    var acctLabel=r.isResponse?(r.spill?'Spill: '+r.spill+(r.job?' · Job: '+r.job:''):'Response — needs coding'):(r.account?r.account+' / '+(r.cc||'no CC'):'Needs coding');
-    var aiTag=r.photo?'<span class="tag tag-ai">📷 Photo</span>':'';
+  var html='';
+  receipts.forEach(function(r){
+    var acctLabel=r.isResponse?(r.spill?'Spill: '+r.spill+(r.job?' Job: '+r.job:''):'Response - needs coding'):(r.account?r.account+' / '+(r.cc||'no CC'):'Needs coding');
+    var aiTag=r.photo?'<span class="tag tag-ai">Photo</span>':'';
     var statusTag=r.coded?'<span class="tag tag-coded">Coded</span>':'<span class="tag tag-uncoded">Needs Coding</span>';
     var responseTag=r.isResponse?'<span class="tag tag-response">Response</span>':'';
-    return '<div class="receipt-card '+(r.isResponse?'response-card':'regular-card')+'">'
-      +'<div class="receipt-card-header"><div class="receipt-vendor">'+r.vendor+'</div><div class="receipt-amount">$'+parseFloat(r.amount||0).toFixed(2)+'</div></div>'
-      +'<div class="receipt-meta"><span class="receipt-date">'+fmtDate(r.date)+'</span>'+statusTag+responseTag+aiTag+'</div>'
-      +(r.items?'<div style="font-size:12px;color:var(--gray);margin-top:5px">'+r.items+(r.usedfor?' — '+r.usedfor:'')+'</div>':'')
-      +(r.coded?'<div style="font-size:11px;color:var(--teal-dark);margin-top:3px">'+acctLabel+'</div>':'')
-      +'<div class="receipt-card-footer"><button class="btn-sm btn-code" onclick="openEdit(''+r.id+'')">✏️ Edit</button><button class="btn-sm btn-delete" onclick="deleteReceipt(''+r.id+'')">🗑️ Delete</button></div></div>';
-  }).join('');
+    html+='<div class="receipt-card '+(r.isResponse?'response-card':'regular-card')+'">';
+    html+='<div class="receipt-card-header"><div class="receipt-vendor">'+r.vendor+'</div><div class="receipt-amount">$'+parseFloat(r.amount||0).toFixed(2)+'</div></div>';
+    html+='<div class="receipt-meta"><span class="receipt-date">'+fmtDate(r.date)+'</span>'+statusTag+responseTag+aiTag+'</div>';
+    if(r.items){html+='<div style="font-size:12px;color:var(--gray);margin-top:5px">'+r.items+(r.usedfor?' - '+r.usedfor:'')+'</div>';}
+    if(r.coded){html+='<div style="font-size:11px;color:var(--teal-dark);margin-top:3px">'+acctLabel+'</div>';}
+    html+='<div class="receipt-card-footer">';
+    html+='<button class="btn-sm btn-code" onclick="openEdit(''+r.id+'')">Edit</button>';
+    html+='<button class="btn-sm btn-delete" onclick="deleteReceipt(''+r.id+'')">Delete</button>';
+    html+='</div></div>';
+  });
+  list.innerHTML=html;
 }
 
 function updateExportSummary(){
