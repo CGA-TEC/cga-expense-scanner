@@ -201,7 +201,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--navy);color:var(--black);
 <div class="topbar">
   <div class="topbar-logo">
     <span class="topbar-badge">CGA</span>
-    <span class="topbar-title">Expense Scanner <span class="version">v2.0</span></span>
+    <span class="topbar-title">Expense Scanner <span class="version">v2.1</span></span>
   </div>
   <span class="topbar-count" id="topCount" onclick="switchTab('receipts')">0 receipts</span>
 </div>
@@ -353,11 +353,16 @@ body{font-family:'DM Sans',sans-serif;background:var(--navy);color:var(--black);
 
     <!-- PHOTO / SCAN AREA -->
     <input type="file" id="photoInput" accept="image/*,application/pdf" capture="environment" style="display:none" onchange="attachAndReadPhoto(this)">
-    <div class="attach-area" id="attachArea" onclick="document.getElementById('photoInput').click()">
+    <input type="file" id="fileInput" accept="image/*,application/pdf" style="display:none" onchange="attachAndReadPhoto(this)">
+    <div class="attach-area" id="attachArea">
       <div class="attach-area-icon">📷</div>
-      <div class="attach-area-label" id="attachLabel">Tap to Scan Receipt</div>
-      <div class="attach-area-sub" id="attachSub">Use iPhone document scan or camera</div>
+      <div class="attach-area-label" id="attachLabel">Attach Receipt</div>
+      <div class="attach-area-sub" id="attachSub">Choose how to add your receipt</div>
       <img class="photo-preview" id="photoImg" src="" alt="Receipt">
+      <div style="display:flex;gap:8px;margin-top:12px;width:100%">
+        <button onclick="document.getElementById('photoInput').click()" style="flex:1;padding:10px 6px;background:var(--navy);color:white;border:none;border-radius:10px;font-family:DM Sans,sans-serif;font-size:12px;font-weight:600;cursor:pointer">📷 Camera</button>
+        <button onclick="document.getElementById('fileInput').click()" style="flex:1;padding:10px 6px;background:var(--teal);color:white;border:none;border-radius:10px;font-family:DM Sans,sans-serif;font-size:12px;font-weight:600;cursor:pointer">📁 iCloud File</button>
+      </div>
     </div>
 
     <!-- AI READING STATUS -->
