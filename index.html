@@ -1,1 +1,737 @@
 
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="CGA Expenses">
+<title>CGA Expense Scanner</title>
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{--teal:#00A9B5;--teal-dark:#007A84;--teal-light:#E6F7F8;--teal-mid:#B3E8EC;--navy:#0D2B3E;--black:#1A1A1A;--gray:#8A9AAA;--gray-light:#F0F4F7;--response:#E8650A;--response-light:#FEF0E6;--green:#1A8A50;--green-light:#E8F8F0;--red:#E74C3C;--red-light:#FEE;--radius:16px;--radius-sm:10px;--shadow:0 4px 24px rgba(13,43,62,0.12)}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{font-family:'DM Sans',sans-serif;background:var(--navy);color:var(--black);min-height:100vh}
+.topbar{background:var(--navy);padding:52px 20px 16px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100}
+.topbar-logo{display:flex;align-items:center;gap:10px}
+.topbar-badge{background:var(--teal);color:white;font-weight:700;font-size:13px;padding:5px 10px;border-radius:8px;letter-spacing:1px}
+.topbar-title{color:white;font-size:15px;font-weight:600}
+.version{color:var(--teal);font-size:10px;font-weight:700;margin-left:4px}
+.topbar-count{background:rgba(255,255,255,0.12);color:white;font-size:12px;font-weight:600;padding:4px 12px;border-radius:20px;cursor:pointer}
+.main{background:var(--gray-light);border-radius:28px 28px 0 0;min-height:calc(100vh - 100px);padding:24px 16px 140px}
+.tab-bar{display:flex;gap:8px;margin-bottom:20px;background:white;border-radius:14px;padding:6px;box-shadow:var(--shadow)}
+.tab-btn{flex:1;padding:10px 6px;border:none;border-radius:10px;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:600;cursor:pointer;background:none;color:var(--gray);transition:all 0.2s}
+.tab-btn.active{background:var(--navy);color:white}
+.scan-hero{background:linear-gradient(135deg,var(--teal),var(--teal-dark));border-radius:var(--radius);padding:28px 20px;text-align:center;margin-bottom:20px;cursor:pointer;border:none;width:100%;box-shadow:0 8px 40px rgba(13,43,62,0.18);position:relative;overflow:hidden}
+.scan-icon{font-size:48px;margin-bottom:10px;display:block}
+.scan-label{color:white;font-size:20px;font-weight:700;display:block}
+.scan-sub{color:rgba(255,255,255,0.75);font-size:13px;margin-top:4px;display:block}
+.ai-badge{display:inline-flex;align-items:center;gap:5px;background:rgba(255,255,255,0.2);color:white;font-size:11px;font-weight:600;padding:4px 10px;border-radius:20px;margin-top:8px}
+.ai-dot{width:6px;height:6px;background:#7CFC00;border-radius:50%;animation:pulse 1.5s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}
+.summary-bar{background:white;border-radius:var(--radius);padding:16px;margin-bottom:20px;box-shadow:var(--shadow);display:flex}
+.summary-item{flex:1;text-align:center;padding:0 8px}
+.summary-item+.summary-item{border-left:1px solid var(--gray-light)}
+.summary-num{font-size:22px;font-weight:700;color:var(--navy)}
+.summary-num.teal{color:var(--teal-dark)}
+.summary-num.orange{color:var(--response)}
+.summary-label{font-size:10px;font-weight:600;color:var(--gray);text-transform:uppercase;letter-spacing:0.8px;margin-top:2px}
+.section-label{font-size:11px;font-weight:700;color:var(--gray);letter-spacing:1.2px;text-transform:uppercase;margin:20px 0 10px 4px}
+.receipt-list{display:flex;flex-direction:column;gap:10px}
+.receipt-card{background:white;border-radius:var(--radius);padding:16px;box-shadow:var(--shadow)}
+.receipt-card.response-card{border-left:4px solid var(--response)}
+.receipt-card.regular-card{border-left:4px solid var(--teal)}
+.receipt-card-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px}
+.receipt-vendor{font-size:15px;font-weight:700;color:var(--navy);flex:1;padding-right:10px}
+.receipt-amount{font-size:17px;font-weight:700;color:var(--teal-dark)}
+.receipt-meta{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.receipt-date{font-size:12px;color:var(--gray)}
+.tag{font-size:11px;font-weight:600;padding:3px 8px;border-radius:6px}
+.tag-coded{background:var(--green-light);color:var(--green)}
+.tag-uncoded{background:#FFF3E0;color:#E65100}
+.tag-response{background:var(--response-light);color:var(--response)}
+.tag-ai{background:var(--teal-light);color:var(--teal-dark)}
+.receipt-card-footer{margin-top:10px;padding-top:10px;border-top:1px solid var(--gray-light);display:flex;gap:8px}
+.btn-sm{flex:1;padding:8px;border-radius:8px;border:none;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;cursor:pointer}
+.btn-code{background:var(--teal-light);color:var(--teal-dark)}
+.btn-delete{background:var(--red-light);color:var(--red)}
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(13,43,62,0.6);z-index:200;backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px)}
+.modal-overlay.open{display:flex;align-items:flex-end}
+.modal-sheet{background:white;border-radius:24px 24px 0 0;padding:12px 20px 48px;width:100%;max-height:92vh;overflow-y:auto;animation:slideUp 0.3s ease}
+@keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
+.modal-handle{width:40px;height:4px;background:#DDD;border-radius:2px;margin:0 auto 20px}
+.modal-title{font-size:18px;font-weight:700;color:var(--navy);margin-bottom:4px}
+.modal-sub{font-size:13px;color:var(--gray);margin-bottom:20px}
+.ai-reading{background:linear-gradient(135deg,var(--teal-light),#E0F5F7);border:1.5px solid var(--teal-mid);border-radius:var(--radius-sm);padding:14px 16px;margin-bottom:16px;display:none}
+.ai-reading-header{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.ai-reading-title{font-size:13px;font-weight:700;color:var(--teal-dark)}
+.ai-reading-status{font-size:12px;color:var(--gray);font-family:'DM Mono',monospace}
+.ai-reading-result{font-size:13px;color:var(--navy);margin-top:6px;line-height:1.5}
+.field-group{margin-bottom:16px}
+.field-label{font-size:11px;font-weight:700;color:var(--gray);letter-spacing:0.8px;text-transform:uppercase;margin-bottom:6px;display:block}
+.field-input{width:100%;padding:14px 16px;border:1.5px solid #E5EBF0;border-radius:var(--radius-sm);font-family:'DM Sans',sans-serif;font-size:15px;color:var(--black);background:var(--gray-light);-webkit-appearance:none}
+.field-input:focus{outline:none;border-color:var(--teal);background:white}
+.field-input.ai-filled{border-color:var(--teal);background:var(--teal-light)}
+.field-select{width:100%;padding:14px 16px;border:1.5px solid #E5EBF0;border-radius:var(--radius-sm);font-family:'DM Sans',sans-serif;font-size:15px;color:var(--black);background:var(--gray-light);-webkit-appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%238A9AAA' stroke-width='2' fill='none'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 16px center;padding-right:40px}
+.response-toggle{display:flex;align-items:center;justify-content:space-between;background:var(--gray-light);border-radius:var(--radius-sm);padding:14px 16px;border:1.5px solid transparent;cursor:pointer}
+.response-toggle.active{background:var(--response-light);border-color:var(--response)}
+.toggle-title{font-size:15px;font-weight:600;color:var(--black)}
+.response-toggle.active .toggle-title{color:var(--response)}
+.toggle-sub{font-size:12px;color:var(--gray)}
+.toggle-switch{width:48px;height:28px;background:#DDD;border-radius:14px;position:relative;transition:background 0.2s;flex-shrink:0}
+.toggle-switch.on{background:var(--response)}
+.toggle-switch::after{content:'';position:absolute;top:3px;left:3px;width:22px;height:22px;background:white;border-radius:50%;transition:transform 0.2s;box-shadow:0 1px 4px rgba(0,0,0,0.2)}
+.toggle-switch.on::after{transform:translateX(20px)}
+.btn-save{width:100%;padding:16px;background:linear-gradient(135deg,var(--teal),var(--teal-dark));color:white;border:none;border-radius:var(--radius);font-family:'DM Sans',sans-serif;font-size:16px;font-weight:700;cursor:pointer;margin-top:8px;box-shadow:0 4px 16px rgba(0,169,181,0.35)}
+.btn-save.response-save{background:linear-gradient(135deg,var(--response),#C4500A)}
+.btn-cancel{width:100%;padding:14px;background:none;border:none;font-family:'DM Sans',sans-serif;font-size:15px;color:var(--gray);cursor:pointer;margin-top:8px}
+.btn-action{width:100%;padding:14px 16px;border-radius:var(--radius-sm);border:none;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:600;cursor:pointer;margin-bottom:12px;display:flex;align-items:center;justify-content:center;gap:8px}
+.btn-teal{background:linear-gradient(135deg,var(--teal),var(--teal-dark));color:white;box-shadow:0 4px 16px rgba(0,169,181,0.3)}
+.btn-navy{background:var(--navy);color:white}
+.btn-outline{background:white;color:var(--navy);border:1.5px solid #E5EBF0}
+.attach-area{border:2px dashed var(--teal-mid);border-radius:var(--radius-sm);padding:20px;text-align:center;margin-bottom:16px;background:var(--teal-light)}
+.attach-area.has-photo{border-style:solid;border-color:var(--teal)}
+.attach-area-icon{font-size:32px;margin-bottom:6px}
+.attach-area-label{font-size:14px;font-weight:600;color:var(--teal-dark)}
+.attach-area-sub{font-size:12px;color:var(--gray);margin-top:3px}
+.photo-preview{width:100%;max-height:200px;object-fit:contain;border-radius:10px;margin-top:10px;display:none}
+.attach-buttons{display:flex;gap:8px;margin-top:12px}
+.attach-btn{flex:1;padding:10px 6px;border:none;border-radius:10px;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;cursor:pointer}
+.attach-btn-camera{background:var(--navy);color:white}
+.attach-btn-file{background:var(--teal);color:white}
+.statement-zone{border:2px dashed var(--teal-mid);border-radius:var(--radius);padding:32px 20px;text-align:center;background:white;cursor:pointer;margin-bottom:16px}
+.missing-list{display:flex;flex-direction:column;gap:8px}
+.missing-item{background:white;border-radius:var(--radius-sm);padding:14px 16px;box-shadow:var(--shadow);border-left:4px solid var(--response);display:flex;justify-content:space-between;align-items:center}
+.missing-vendor{font-size:14px;font-weight:600;color:var(--navy)}
+.missing-amount{font-size:14px;font-weight:700;color:var(--response)}
+.missing-date{font-size:12px;color:var(--gray)}
+.match-item{border-left-color:var(--green)}
+.settings-card{background:white;border-radius:var(--radius);padding:20px;box-shadow:var(--shadow);margin-bottom:16px}
+.settings-title{font-size:14px;font-weight:700;color:var(--navy);margin-bottom:12px}
+.api-status{display:flex;align-items:center;gap:6px;font-size:12px;font-weight:600;margin-bottom:12px}
+.api-status-dot{width:8px;height:8px;border-radius:50%;background:#DDD}
+.api-status-dot.connected{background:#7CFC00}
+.bottom-nav{position:fixed;bottom:0;left:0;right:0;background:white;padding:12px 20px 28px;display:flex;gap:12px;box-shadow:0 -4px 24px rgba(13,43,62,0.10);z-index:150}
+.nav-btn{flex:1;padding:12px;border-radius:12px;border:none;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:600;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px}
+.nav-btn-icon{font-size:20px}
+.nav-btn-primary{background:var(--teal);color:white;box-shadow:0 4px 12px rgba(0,169,181,0.3)}
+.nav-btn-secondary{background:var(--gray-light);color:var(--navy)}
+.empty-state{text-align:center;padding:48px 20px;color:var(--gray)}
+.empty-icon{font-size:56px;margin-bottom:12px;opacity:0.5}
+.empty-title{font-size:16px;font-weight:600;margin-bottom:6px;color:var(--navy)}
+.toast{position:fixed;bottom:110px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--navy);color:white;padding:12px 24px;border-radius:24px;font-size:14px;font-weight:600;opacity:0;transition:all 0.3s;z-index:400;white-space:nowrap;box-shadow:var(--shadow)}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.pdf-section{background:white;border-radius:var(--radius);padding:16px;box-shadow:var(--shadow);margin-bottom:12px}
+.pdf-section-title{font-size:13px;font-weight:700;color:var(--navy);margin-bottom:10px}
+.pdf-row{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--gray-light);font-size:13px}
+.pdf-row:last-child{border-bottom:none}
+.pdf-row-label{color:var(--gray);font-weight:500}
+.pdf-row-value{color:var(--navy);font-weight:600;text-align:right;max-width:60%}
+.info-box{background:var(--teal-light);border:1px solid var(--teal-mid);border-radius:var(--radius-sm);padding:12px 14px;font-size:12px;color:var(--teal-dark);margin-bottom:16px;line-height:1.5}
+.two-col{display:flex;gap:10px}
+.two-col .field-group{flex:1}
+</style>
+</head>
+<body>
+<div class="topbar">
+  <div class="topbar-logo">
+    <span class="topbar-badge">CGA</span>
+    <span class="topbar-title">Expense Scanner <span class="version">v2.2</span></span>
+  </div>
+  <span class="topbar-count" id="topCount" onclick="switchTab('receipts')">0 receipts</span>
+</div>
+<div class="main">
+  <div class="tab-bar">
+    <button class="tab-btn active" id="tab-receipts" onclick="switchTab('receipts')">🧾 Receipts</button>
+    <button class="tab-btn" id="tab-export" onclick="switchTab('export')">📄 Export</button>
+    <button class="tab-btn" id="tab-statement" onclick="switchTab('statement')">🏦 Statement</button>
+    <button class="tab-btn" id="tab-settings" onclick="switchTab('settings')">⚙️ Settings</button>
+  </div>
+  <div id="panel-receipts">
+    <div class="summary-bar" id="summaryBar" style="display:none">
+      <div class="summary-item"><div class="summary-num" id="sumTotal">$0</div><div class="summary-label">Total</div></div>
+      <div class="summary-item"><div class="summary-num teal" id="sumCoded">0</div><div class="summary-label">Coded</div></div>
+      <div class="summary-item"><div class="summary-num orange" id="sumResponse">0</div><div class="summary-label">Response</div></div>
+    </div>
+    <button class="scan-hero" onclick="openNew()">
+      <span class="scan-icon">📷</span>
+      <span class="scan-label">Scan Receipt</span>
+      <span class="scan-sub">Tap to add a receipt</span>
+      <span class="ai-badge"><span class="ai-dot"></span> AI Auto-Fill</span>
+    </button>
+    <div class="section-label">THIS MONTH'S RECEIPTS</div>
+    <div class="receipt-list" id="receiptList">
+      <div class="empty-state"><div class="empty-icon">🧾</div><div class="empty-title">No receipts yet</div><div class="empty-sub">Tap Scan Receipt to get started</div></div>
+    </div>
+  </div>
+  <div id="panel-export" style="display:none">
+    <div class="section-label">EXPORT OPTIONS</div>
+    <div class="pdf-section">
+      <div class="pdf-section-title">📋 Month Summary</div>
+      <div class="pdf-row"><span class="pdf-row-label">Card Holder</span><span class="pdf-row-value">Chris DeMaskey</span></div>
+      <div class="pdf-row"><span class="pdf-row-label">Card Number</span><span class="pdf-row-value">ending 0848</span></div>
+      <div class="pdf-row"><span class="pdf-row-label">Period</span><span class="pdf-row-value" id="exportPeriod">—</span></div>
+      <div class="pdf-row"><span class="pdf-row-label">Total Receipts</span><span class="pdf-row-value" id="exportCount">0</span></div>
+      <div class="pdf-row"><span class="pdf-row-label">Total Amount</span><span class="pdf-row-value" id="exportTotal">$0.00</span></div>
+      <div class="pdf-row"><span class="pdf-row-label">Regular ARP</span><span class="pdf-row-value" id="exportRegular">$0.00</span></div>
+      <div class="pdf-row"><span class="pdf-row-label">Response ARP</span><span class="pdf-row-value" id="exportResponse">$0.00</span></div>
+    </div>
+    <button class="btn-action btn-teal" onclick="generatePDF()"><span>📄</span> Generate PDF Package</button>
+    <div class="info-box">PDF includes CC Log, CGA ARP summary, and all receipt images. Save to iCloud Drive → CGA Expenses → [Month] → Submitted.</div>
+    <button class="btn-action btn-navy" onclick="exportJSON()"><span>💾</span> Export Data (JSON)</button>
+    <button class="btn-action btn-outline" onclick="exportCSV()"><span>📊</span> Export CSV for Excel</button>
+    <div class="section-label">DANGER ZONE</div>
+    <button class="btn-action" style="background:var(--red-light);color:var(--red);border-radius:var(--radius-sm);border:none;padding:14px;width:100%;font-family:DM Sans,sans-serif;font-size:14px;font-weight:600;cursor:pointer" onclick="clearMonth()">🗑️ Clear All Receipts (New Month)</button>
+  </div>
+  <div id="panel-statement" style="display:none">
+    <div class="section-label">UPLOAD BOA STATEMENT</div>
+    <div class="info-box">Upload your Bank of America PDF statement. AI will compare it against your logged receipts and flag anything missing.</div>
+    <input type="file" id="statementInput" accept="application/pdf,image/*" style="display:none" onchange="readStatement(this)">
+    <div class="statement-zone" id="statementZone" onclick="document.getElementById('statementInput').click()">
+      <div style="font-size:48px;margin-bottom:10px">🏦</div>
+      <div style="font-size:16px;font-weight:700;color:var(--navy);margin-bottom:4px">Tap to Upload Statement</div>
+      <div style="font-size:13px;color:var(--gray)">PDF or image — BOA credit card statement</div>
+    </div>
+    <div id="statementResults" style="display:none">
+      <div class="section-label">COMPARISON RESULTS</div>
+      <div class="missing-list" id="missingList"></div>
+    </div>
+  </div>
+  <div id="panel-settings" style="display:none">
+    <div class="settings-card">
+      <div class="settings-title">🤖 Anthropic API</div>
+      <div class="api-status"><div class="api-status-dot" id="apiDot"></div><span id="apiStatusText">Not configured</span></div>
+      <div class="field-group">
+        <label class="field-label">API Key</label>
+        <input class="field-input" id="apiKeyInput" type="password" placeholder="sk-ant-api03-..." autocomplete="off">
+      </div>
+      <div class="info-box" style="margin-bottom:12px">Your key is stored only on this device. Never shared anywhere except Anthropic API.</div>
+      <button class="btn-action btn-teal" style="margin-bottom:0" onclick="saveApiKey()">💾 Save API Key</button>
+      <button class="btn-action btn-outline" style="margin-top:8px;margin-bottom:0" onclick="testApiKey()">🔌 Test Connection</button>
+    </div>
+    <div class="settings-card">
+      <div class="settings-title">👤 Card Info</div>
+      <div class="pdf-row"><span class="pdf-row-label">Name</span><span class="pdf-row-value">Chris DeMaskey</span></div>
+      <div class="pdf-row"><span class="pdf-row-label">Card</span><span class="pdf-row-value">BOA ending 0848</span></div>
+      <div class="pdf-row"><span class="pdf-row-label">Company</span><span class="pdf-row-value">Clean Gulf Associates</span></div>
+      <div class="pdf-row"><span class="pdf-row-label">Statement Period</span><span class="pdf-row-value">28th – 27th</span></div>
+    </div>
+    <div class="settings-card">
+      <div class="settings-title">ℹ️ App Info</div>
+      <div class="pdf-row"><span class="pdf-row-label">Version</span><span class="pdf-row-value">2.2</span></div>
+      <div class="pdf-row"><span class="pdf-row-label">Receipts Stored</span><span class="pdf-row-value" id="settingsCount">0</span></div>
+    </div>
+  </div>
+</div>
+<div class="bottom-nav">
+  <button class="nav-btn nav-btn-secondary" onclick="switchTab('statement')"><span class="nav-btn-icon">🏦</span><span>Statement</span></button>
+  <button class="nav-btn nav-btn-primary" onclick="openNew()"><span class="nav-btn-icon">📷</span><span>Scan</span></button>
+  <button class="nav-btn nav-btn-secondary" onclick="switchTab('export')"><span class="nav-btn-icon">📄</span><span>Export</span></button>
+  <button class="nav-btn nav-btn-secondary" onclick="switchTab('settings')"><span class="nav-btn-icon">⚙️</span><span>Settings</span></button>
+</div>
+<div class="modal-overlay" id="codeModal">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-title" id="modalTitle">New Receipt</div>
+    <div class="modal-sub" id="modalSub">Scan or attach a receipt — AI will read it</div>
+    <input type="file" id="photoInput" accept="image/*,application/pdf" capture="environment" style="display:none" onchange="attachAndReadPhoto(this)">
+    <input type="file" id="fileInput" accept="image/*,application/pdf" style="display:none" onchange="attachAndReadPhoto(this)">
+    <div class="attach-area" id="attachArea">
+      <div class="attach-area-icon">📷</div>
+      <div class="attach-area-label" id="attachLabel">Attach Receipt</div>
+      <div class="attach-area-sub" id="attachSub">Choose how to add your receipt</div>
+      <img class="photo-preview" id="photoImg" src="" alt="Receipt">
+      <div class="attach-buttons">
+        <button class="attach-btn attach-btn-camera" onclick="document.getElementById('photoInput').click()">📷 Camera</button>
+        <button class="attach-btn attach-btn-file" onclick="document.getElementById('fileInput').click()">📁 iCloud File</button>
+      </div>
+    </div>
+    <div class="ai-reading" id="aiReading">
+      <div class="ai-reading-header">
+        <span style="font-size:20px">🤖</span>
+        <div><div class="ai-reading-title">AI Reading Receipt</div><div class="ai-reading-status" id="aiStatus">Analyzing...</div></div>
+      </div>
+      <div class="ai-reading-result" id="aiResult"></div>
+    </div>
+    <div class="field-group">
+      <label class="field-label">Vendor</label>
+      <input class="field-input" id="f_vendor" type="text" placeholder="e.g. Shell Oil, Best Buy">
+    </div>
+    <div class="two-col">
+      <div class="field-group">
+        <label class="field-label">Date</label>
+        <input class="field-input" id="f_date" type="date">
+      </div>
+      <div class="field-group">
+        <label class="field-label">Amount</label>
+        <input class="field-input" id="f_amount" type="number" step="0.01" placeholder="0.00">
+      </div>
+    </div>
+    <div class="field-group">
+      <label class="field-label">Items</label>
+      <input class="field-input" id="f_items" type="text" placeholder="e.g. Truck Fuel, Oil Change">
+    </div>
+    <div class="field-group">
+      <label class="field-label">To Be Used For</label>
+      <input class="field-input" id="f_usedfor" type="text" placeholder="e.g. Field Operations, StarLink">
+    </div>
+    <div class="field-group">
+      <label class="field-label">Charge Type</label>
+      <div class="response-toggle" id="responseToggle" onclick="toggleResponse()">
+        <div><div class="toggle-title" id="toggleTitle">Regular Expense</div><div class="toggle-sub" id="toggleSub">Goes on standard CGA ARP</div></div>
+        <div class="toggle-switch" id="toggleSwitch"></div>
+      </div>
+    </div>
+    <div id="regularFields">
+      <div class="field-group">
+        <label class="field-label">Account Code</label>
+        <select class="field-select" id="f_account" onchange="onAcctChange()">
+          <option value="">— Select Account —</option>
+          <optgroup label="Travel"><option value="52501">52501 — Airfare</option><option value="52502">52502 — Trans and Auto Mileage</option><option value="52503">52503 — Lodging</option><option value="52504">52504 — Employee Meals</option><option value="52506">52506 — Business Meetings</option></optgroup>
+          <optgroup label="Vehicle"><option value="54505">54505 — Vehicle Fuel Oil Grease</option><option value="54507">54507 — Vehicle Repairs</option><option value="54501">54501 — Equipment Rental</option></optgroup>
+          <optgroup label="Info / Comms"><option value="55501">55501 — Non Cap Purchases - Computers</option><option value="55502">55502 — Repairs and Maint - Computers</option><option value="55503">55503 — Software and Licensing</option><option value="55504">55504 — Computer Usage/Website Services</option><option value="56001">56001 — Non Cap Purchases - Telephone</option><option value="56006">56006 — Network Services</option><option value="56009">56009 — Telephone - Cellular</option></optgroup>
+          <optgroup label="UAS / Drone"><option value="54725">54725 — Unmanned Aircraft System (Drone)</option></optgroup>
+          <optgroup label="Training"><option value="57501">57501 — PROs Training</option><option value="57001">57001 — Trng Courses/Seminars</option></optgroup>
+          <optgroup label="General Admin"><option value="55002">55002 — Uniforms</option><option value="55004">55004 — Employee Licenses and Other Fees</option><option value="56504">56504 — Safety Purchases</option><option value="56505">56505 — Safety - PPE</option><option value="58501">58501 — Postage/Express Mail/Freight</option><option value="58502">58502 — Administrative Office Costs</option><option value="58504">58504 — Office Equip Rental</option><option value="58505">58505 — Office Equipment</option></optgroup>
+        </select>
+      </div>
+      <div class="field-group">
+        <label class="field-label">Cost Center</label>
+        <select class="field-select" id="f_cc">
+          <option value="">— Select Cost Center —</option>
+          <option value="600010">600010 — Aransas Pass</option><option value="600011">600011 — Galveston</option><option value="600013">600013 — Vermilion</option><option value="600014">600014 — Venice</option><option value="600016">600016 — New Orleans</option><option value="600020">600020 — Leeville</option><option value="600021">600021 — Houston</option><option value="600022">600022 — Harvey</option><option value="600023">600023 — Harvey 735</option><option value="601010">601010 — Corporate</option><option value="Split">Split — Multiple Cost Centers</option>
+        </select>
+      </div>
+      <div class="field-group">
+        <label class="field-label">Business Segment</label>
+        <select class="field-select" id="f_seg">
+          <option value="">— Select Segment —</option>
+          <option value="00">00 — Non-Maintenance</option><option value="11">11 — PM</option><option value="12">12 — CM</option><option value="13">13 — Transportation</option><option value="14">14 — Vessel Fuel and Lube</option>
+        </select>
+      </div>
+      <div class="field-group">
+        <label class="field-label">Billing Code</label>
+        <select class="field-select" id="f_bc_regular">
+          <option value="">— Leave Blank —</option><option value="50">50 — Internal Project</option>
+        </select>
+      </div>
+    </div>
+    <div id="responseFields" style="display:none">
+      <div class="field-group">
+        <label class="field-label">Response / Job Number</label>
+        <input class="field-input" id="f_job" type="text" placeholder="e.g. 970500">
+      </div>
+      <div class="field-group">
+        <label class="field-label">Spill Account Code</label>
+        <select class="field-select" id="f_spill">
+          <option value="">— Select Spill Account —</option>
+          <option value="52501">52501 — Airfare</option><option value="52502">52502 — Trans and Auto Mileage</option><option value="52503">52503 — Lodging</option><option value="52504">52504 — Employee Meals</option><option value="54503">54503 — Equipment Repairs</option><option value="54509">54509 — Non Cap Purc-Resp Eq</option><option value="53505">53505 — Fuel</option><option value="53512">53512 — Food/Provisions/Supplies</option><option value="54501">54501 — Equipment Rental</option><option value="55003">55003 — Ops Consultants</option><option value="57501">57501 — Subcontractors</option>
+        </select>
+      </div>
+      <div class="field-group">
+        <label class="field-label">Billing Code</label>
+        <select class="field-select" id="f_bc">
+          <option value="05">05 — Non-Billable Activity</option><option value="10">10 — Billable Activities</option>
+        </select>
+      </div>
+    </div>
+    <div class="field-group">
+      <label class="field-label">Notes (optional)</label>
+      <input class="field-input" id="f_notes" type="text" placeholder="Any additional notes">
+    </div>
+    <button class="btn-save" id="saveBtn" onclick="saveReceipt()">Save Receipt</button>
+    <button class="btn-cancel" onclick="closeModal()">Cancel</button>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+<script>
+var receipts=JSON.parse(localStorage.getItem('cga_receipts')||'[]');
+var currentId=null,isResponse=false,currentPhotoData=null;
+
+function init(){renderList();updateExportSummary();checkApiKey();document.getElementById('settingsCount').textContent=receipts.length;}
+
+function switchTab(tab){
+  ['receipts','export','statement','settings'].forEach(function(t){
+    document.getElementById('panel-'+t).style.display=t===tab?'block':'none';
+    document.getElementById('tab-'+t).classList.toggle('active',t===tab);
+  });
+  if(tab==='export')updateExportSummary();
+  if(tab==='settings')document.getElementById('settingsCount').textContent=receipts.length;
+}
+
+function getApiKey(){return localStorage.getItem('cga_api_key')||'';}
+
+function saveApiKey(){
+  var key=document.getElementById('apiKeyInput').value.trim();
+  if(!key){showToast('Please enter an API key');return;}
+  if(!key.startsWith('sk-ant-')){showToast('Key should start with sk-ant-');return;}
+  localStorage.setItem('cga_api_key',key);checkApiKey();showToast('API key saved');
+}
+
+function checkApiKey(){
+  var key=getApiKey();
+  var dot=document.getElementById('apiDot');
+  var txt=document.getElementById('apiStatusText');
+  if(key&&key.startsWith('sk-ant-')){dot.classList.add('connected');txt.textContent='Connected — key saved on device';document.getElementById('apiKeyInput').value=key;}
+  else{dot.classList.remove('connected');txt.textContent='Not configured';}
+}
+
+async function testApiKey(){
+  showToast('Testing connection...');
+  try{
+    var resp=await fetch('/.netlify/functions/anthropic',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:50,messages:[{role:'user',content:'Reply with just: API OK'}]})});
+    var data=await resp.json();
+    if(data.content&&data.content[0]){showToast('✅ API Connected!');document.getElementById('apiDot').classList.add('connected');document.getElementById('apiStatusText').textContent='Connected and working';}
+    else{showToast('❌ '+(data.error?data.error.message:'Check key'));}
+  }catch(e){showToast('❌ Connection failed: '+e.message);}
+}
+
+function attachAndReadPhoto(input){
+  if(!input.files||!input.files[0])return;
+  var file=input.files[0];
+  var mimeType=file.type||'image/jpeg';
+  var reader=new FileReader();
+  reader.onload=function(e){
+    var originalBase64=e.target.result;
+    document.getElementById('photoImg').src=originalBase64;
+    document.getElementById('photoImg').style.display='block';
+    document.getElementById('attachArea').classList.add('has-photo');
+    document.getElementById('attachLabel').textContent=mimeType==='application/pdf'?'📄 PDF Attached':'📷 Photo Attached';
+    document.getElementById('attachSub').textContent='Tap buttons below to change';
+    currentPhotoData=originalBase64;
+    var fileData=originalBase64.split(',')[1];
+    if(mimeType==='application/pdf'){
+      readReceiptWithAI(fileData,'application/pdf');
+    }else{
+      document.getElementById('attachSub').textContent='Compressing...';
+      var img=new Image();
+      img.onload=function(){
+        var canvas=document.createElement('canvas');
+        var maxW=1024,maxH=1024,w=img.width,h=img.height;
+        if(w>maxW){h=h*maxW/w;w=maxW;}
+        if(h>maxH){w=w*maxH/h;h=maxH;}
+        canvas.width=w;canvas.height=h;
+        canvas.getContext('2d').drawImage(img,0,0,w,h);
+        var compressed=canvas.toDataURL('image/jpeg',0.7);
+        document.getElementById('attachSub').textContent='Tap buttons below to change';
+        readReceiptWithAI(compressed.split(',')[1],'image/jpeg');
+      };
+      img.src=originalBase64;
+    }
+  };
+  reader.readAsDataURL(file);
+}
+
+async function readReceiptWithAI(fileData,mimeType){
+  var aiBox=document.getElementById('aiReading');
+  var aiStatus=document.getElementById('aiStatus');
+  var aiResult=document.getElementById('aiResult');
+  aiBox.style.display='block';
+  aiStatus.textContent='Reading receipt...';
+  aiResult.textContent='';
+  try{
+    var msgContent=[];
+    if(mimeType==='application/pdf'){
+      msgContent.push({type:'document',source:{type:'base64',media_type:'application/pdf',data:fileData}});
+    }else{
+      var validMime=['image/jpeg','image/png','image/gif','image/webp'].includes(mimeType)?mimeType:'image/jpeg';
+      msgContent.push({type:'image',source:{type:'base64',media_type:validMime,data:fileData}});
+    }
+    msgContent.push({type:'text',text:'This is a receipt. Extract ONLY these fields and return as JSON with no other text: {"vendor":"store name","date":"YYYY-MM-DD","amount":"number only no $","items":"brief description of what was purchased"}. If you cannot read a field return empty string. Return only the JSON object.'});
+    var resp=await fetch('/.netlify/functions/anthropic',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:300,messages:[{role:'user',content:msgContent}]})});
+    var data=await resp.json();
+    if(data.content&&data.content[0]&&data.content[0].text){
+      var text=data.content[0].text.trim().replace(/```json|```/g,'').trim();
+      try{
+        var parsed=JSON.parse(text);
+        if(parsed.vendor){document.getElementById('f_vendor').value=parsed.vendor;document.getElementById('f_vendor').classList.add('ai-filled');}
+        if(parsed.date){document.getElementById('f_date').value=parsed.date;document.getElementById('f_date').classList.add('ai-filled');}
+        if(parsed.amount){document.getElementById('f_amount').value=parseFloat(parsed.amount).toFixed(2);document.getElementById('f_amount').classList.add('ai-filled');}
+        if(parsed.items){document.getElementById('f_items').value=parsed.items;document.getElementById('f_items').classList.add('ai-filled');}
+        aiStatus.textContent='✅ Fields auto-filled — review and confirm';
+        aiResult.textContent=(parsed.vendor||'')+' · $'+(parsed.amount||'0')+' · '+(parsed.date||'');
+      }catch(e){aiStatus.textContent='⚠️ Could not parse — fill in manually';aiResult.textContent=text;}
+    }else if(data.error){
+      aiStatus.textContent='❌ '+(data.error.message||'API error — fill in manually');
+    }else{
+      aiStatus.textContent='⚠️ No response — fill in manually';
+    }
+  }catch(e){aiStatus.textContent='❌ Error: '+e.message;}
+}
+
+function openNew(){
+  currentId=Date.now().toString();currentPhotoData=null;isResponse=false;
+  document.getElementById('modalTitle').textContent='New Receipt';
+  document.getElementById('modalSub').textContent='Scan or attach a receipt — AI will read it';
+  clearForm();updateToggleUI();
+  document.getElementById('codeModal').classList.add('open');
+  switchTab('receipts');
+}
+
+function openEdit(id){
+  var r=receipts.find(function(x){return x.id===id;});
+  if(!r)return;
+  currentId=id;currentPhotoData=r.photo||null;isResponse=r.isResponse||false;
+  document.getElementById('modalTitle').textContent='Edit Receipt';
+  document.getElementById('modalSub').textContent=r.vendor||'Edit receipt details';
+  document.getElementById('f_vendor').value=r.vendor||'';
+  document.getElementById('f_date').value=r.date||today();
+  document.getElementById('f_amount').value=r.amount||'';
+  document.getElementById('f_items').value=r.items||'';
+  document.getElementById('f_usedfor').value=r.usedfor||'';
+  document.getElementById('f_account').value=r.account||'';
+  document.getElementById('f_cc').value=r.cc||'';
+  document.getElementById('f_seg').value=r.seg||'';
+  document.getElementById('f_job').value=r.job||'';
+  document.getElementById('f_bc_regular').value=r.bc||'';
+  document.getElementById('f_spill').value=r.spill||'';
+  document.getElementById('f_bc').value=r.bc||'05';
+  document.getElementById('f_notes').value=r.notes||'';
+  document.getElementById('aiReading').style.display='none';
+  if(r.photo){document.getElementById('photoImg').src=r.photo;document.getElementById('photoImg').style.display='block';document.getElementById('attachArea').classList.add('has-photo');document.getElementById('attachLabel').textContent='Receipt Attached';document.getElementById('attachSub').textContent='Tap buttons below to change';}
+  else{resetAttachArea();}
+  updateToggleUI();
+  document.getElementById('codeModal').classList.add('open');
+}
+
+function closeModal(){document.getElementById('codeModal').classList.remove('open');}
+
+function resetAttachArea(){
+  document.getElementById('photoImg').style.display='none';
+  document.getElementById('attachArea').classList.remove('has-photo');
+  document.getElementById('attachLabel').textContent='Attach Receipt';
+  document.getElementById('attachSub').textContent='Choose how to add your receipt';
+}
+
+function clearForm(){
+  ['f_vendor','f_amount','f_items','f_usedfor','f_account','f_cc','f_seg','f_job','f_bc_regular','f_spill','f_notes'].forEach(function(id){
+    var el=document.getElementById(id);el.value='';if(el.classList)el.classList.remove('ai-filled');
+  });
+  document.getElementById('f_date').value=today();
+  document.getElementById('f_bc').value='05';
+  document.getElementById('photoInput').value='';
+  document.getElementById('fileInput').value='';
+  document.getElementById('aiReading').style.display='none';
+  resetAttachArea();
+}
+
+function toggleResponse(){isResponse=!isResponse;updateToggleUI();}
+
+function updateToggleUI(){
+  document.getElementById('responseToggle').classList.toggle('active',isResponse);
+  document.getElementById('toggleSwitch').classList.toggle('on',isResponse);
+  document.getElementById('toggleTitle').textContent=isResponse?'Response Charge':'Regular Expense';
+  document.getElementById('toggleSub').textContent=isResponse?'Goes on CGAS Response ARP (97xxxx)':'Goes on standard CGA ARP';
+  document.getElementById('regularFields').style.display=isResponse?'none':'block';
+  document.getElementById('responseFields').style.display=isResponse?'block':'none';
+  document.getElementById('saveBtn').classList.toggle('response-save',isResponse);
+}
+
+function onAcctChange(){if(document.getElementById('f_account').value)document.getElementById('f_seg').value='00';}
+
+function saveReceipt(){
+  var vendor=document.getElementById('f_vendor').value.trim();
+  var amount=document.getElementById('f_amount').value.trim();
+  if(!vendor){showToast('Please enter a vendor name');return;}
+  if(!amount){showToast('Please enter an amount');return;}
+  var receipt={
+    id:currentId,scannedAt:new Date().toISOString(),vendor:vendor,
+    date:document.getElementById('f_date').value,amount:amount,
+    items:document.getElementById('f_items').value.trim(),
+    usedfor:document.getElementById('f_usedfor').value.trim(),
+    isResponse:isResponse,coded:true,
+    account:isResponse?'':document.getElementById('f_account').value,
+    cc:isResponse?'':document.getElementById('f_cc').value,
+    seg:isResponse?'':document.getElementById('f_seg').value,
+    job:isResponse?document.getElementById('f_job').value.trim():'',
+    spill:isResponse?document.getElementById('f_spill').value:'',
+    bc:isResponse?document.getElementById('f_bc').value:document.getElementById('f_bc_regular').value,
+    notes:document.getElementById('f_notes').value.trim(),photo:currentPhotoData
+  };
+  var idx=receipts.findIndex(function(r){return r.id===receipt.id;});
+  if(idx>=0)receipts[idx]=receipt;else receipts.unshift(receipt);
+  save();closeModal();renderList();updateExportSummary();
+  showToast(isResponse?'Response receipt saved ✅':'Receipt saved ✅');
+}
+
+function deleteReceipt(id){
+  if(!confirm('Delete this receipt?'))return;
+  receipts=receipts.filter(function(r){return r.id!==id;});
+  save();renderList();updateExportSummary();showToast('Deleted');
+}
+
+function renderList(){
+  var list=document.getElementById('receiptList');
+  var count=receipts.length;
+  document.getElementById('topCount').textContent=count+' receipt'+(count!==1?'s':'');
+  document.getElementById('summaryBar').style.display=count>0?'flex':'none';
+  if(count>0){
+    var total=receipts.reduce(function(s,r){return s+parseFloat(r.amount||0);},0);
+    document.getElementById('sumTotal').textContent='$'+total.toFixed(2);
+    document.getElementById('sumCoded').textContent=receipts.filter(function(r){return r.coded;}).length;
+    document.getElementById('sumResponse').textContent=receipts.filter(function(r){return r.isResponse;}).length;
+  }
+  if(count===0){list.innerHTML='<div class="empty-state"><div class="empty-icon">🧾</div><div class="empty-title">No receipts yet</div><div class="empty-sub">Tap Scan Receipt to get started</div></div>';return;}
+  list.innerHTML=receipts.map(function(r){
+    var acctLabel=r.isResponse?(r.spill?'Spill: '+r.spill+(r.job?' · Job: '+r.job:''):'Response — needs coding'):(r.account?r.account+' / '+(r.cc||'no CC'):'Needs coding');
+    var aiTag=r.photo?'<span class="tag tag-ai">📷 Photo</span>':'';
+    var statusTag=r.coded?'<span class="tag tag-coded">Coded</span>':'<span class="tag tag-uncoded">Needs Coding</span>';
+    var responseTag=r.isResponse?'<span class="tag tag-response">Response</span>':'';
+    return '<div class="receipt-card '+(r.isResponse?'response-card':'regular-card')+'">'
+      +'<div class="receipt-card-header"><div class="receipt-vendor">'+r.vendor+'</div><div class="receipt-amount">$'+parseFloat(r.amount||0).toFixed(2)+'</div></div>'
+      +'<div class="receipt-meta"><span class="receipt-date">'+fmtDate(r.date)+'</span>'+statusTag+responseTag+aiTag+'</div>'
+      +(r.items?'<div style="font-size:12px;color:var(--gray);margin-top:5px">'+r.items+(r.usedfor?' — '+r.usedfor:'')+'</div>':'')
+      +(r.coded?'<div style="font-size:11px;color:var(--teal-dark);margin-top:3px">'+acctLabel+'</div>':'')
+      +'<div class="receipt-card-footer"><button class="btn-sm btn-code" onclick="openEdit(''+r.id+'')">✏️ Edit</button><button class="btn-sm btn-delete" onclick="deleteReceipt(''+r.id+'')">🗑️ Delete</button></div></div>';
+  }).join('');
+}
+
+function updateExportSummary(){
+  var total=receipts.reduce(function(s,r){return s+parseFloat(r.amount||0);},0);
+  var respTotal=receipts.filter(function(r){return r.isResponse;}).reduce(function(s,r){return s+parseFloat(r.amount||0);},0);
+  var now=new Date();
+  var ps=new Date(now.getFullYear(),now.getMonth()-1,28);
+  var pe=new Date(now.getFullYear(),now.getMonth(),27);
+  document.getElementById('exportPeriod').textContent=fmtDate(ps.toISOString().slice(0,10))+' – '+fmtDate(pe.toISOString().slice(0,10));
+  document.getElementById('exportCount').textContent=receipts.length;
+  document.getElementById('exportTotal').textContent='$'+total.toFixed(2);
+  document.getElementById('exportRegular').textContent='$'+(total-respTotal).toFixed(2);
+  document.getElementById('exportResponse').textContent='$'+respTotal.toFixed(2);
+}
+
+function generatePDF(){
+  if(receipts.length===0){showToast('No receipts to export');return;}
+  var now=new Date();
+  var monthName=now.toLocaleDateString('en-US',{month:'long',year:'numeric'});
+  var total=receipts.reduce(function(s,r){return s+parseFloat(r.amount||0);},0);
+  var respTotal=receipts.filter(function(r){return r.isResponse;}).reduce(function(s,r){return s+parseFloat(r.amount||0);},0);
+  var regTotal=total-respTotal;
+  var arpGroups={};
+  receipts.filter(function(r){return !r.isResponse;}).forEach(function(r){
+    var key=(r.account||'UNCODED')+'|'+(r.cc||'NOCC');
+    if(!arpGroups[key])arpGroups[key]={account:r.account,cc:r.cc,seg:r.seg,bc:r.bc,total:0,vendors:[]};
+    arpGroups[key].total+=parseFloat(r.amount||0);
+    arpGroups[key].vendors.push(r.vendor);
+  });
+  var html='<!DOCTYPE html><html><head><meta charset="UTF-8"><style>body{font-family:Arial,sans-serif;font-size:11px;color:#1A1A1A;margin:0;padding:20px}h1{font-size:18px;color:#0D2B3E;margin:0 0 4px}h2{font-size:13px;color:#0D2B3E;margin:20px 0 8px;border-bottom:2px solid #00A9B5;padding-bottom:4px}.header{display:flex;justify-content:space-between;margin-bottom:20px}.badge{background:#00A9B5;color:white;font-weight:bold;font-size:14px;padding:6px 12px;border-radius:6px}table{width:100%;border-collapse:collapse;margin-bottom:16px}th{background:#0D2B3E;color:white;padding:8px 6px;text-align:left;font-size:10px}td{padding:6px;border-bottom:1px solid #E5EBF0;font-size:10px}tr:nth-child(even)td{background:#F0F4F7}.total-row td{font-weight:bold;background:#E6F7F8;border-top:2px solid #00A9B5}.response-row td{background:#FEF0E6}.summary{background:#F0F4F7;border-radius:8px;padding:12px;margin-bottom:16px;display:flex;gap:20px}.sum-item{flex:1;text-align:center}.sum-num{font-size:18px;font-weight:bold;color:#0D2B3E}.sum-label{font-size:9px;color:#8A9AAA;text-transform:uppercase}.photo-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.photo-item{text-align:center}.photo-item img{width:100%;border-radius:6px}.photo-caption{font-size:9px;color:#8A9AAA;margin-top:3px}.page-break{page-break-before:always}</style></head><body>';
+  html+='<div class="header"><div><h1>CGA Expense Report</h1><div style="color:#8A9AAA;font-size:11px">'+monthName+' · Chris DeMaskey · Card ending 0848</div></div><span class="badge">CGA</span></div>';
+  html+='<div class="summary"><div class="sum-item"><div class="sum-num">'+receipts.length+'</div><div class="sum-label">Receipts</div></div><div class="sum-item"><div class="sum-num">$'+total.toFixed(2)+'</div><div class="sum-label">Total</div></div><div class="sum-item"><div class="sum-num">$'+regTotal.toFixed(2)+'</div><div class="sum-label">Regular ARP</div></div><div class="sum-item"><div class="sum-num">$'+respTotal.toFixed(2)+'</div><div class="sum-label">Response ARP</div></div></div>';
+  html+='<h2>CC Log — All Charges</h2><table><thead><tr><th>Date</th><th>Vendor</th><th>Items</th><th>Used For</th><th>Amount</th><th>Account</th><th>Cost Center</th></tr></thead><tbody>';
+  receipts.forEach(function(r){html+='<tr'+(r.isResponse?' class="response-row"':'')+'><td>'+fmtDate(r.date)+'</td><td>'+r.vendor+'</td><td>'+(r.items||'')+'</td><td>'+(r.usedfor||'')+'</td><td style="font-weight:bold">$'+parseFloat(r.amount||0).toFixed(2)+'</td><td>'+(r.isResponse?'Spill: '+(r.spill||''):r.account||'')+'</td><td>'+(r.isResponse?'Job: '+(r.job||''):r.cc||'')+'</td></tr>';});
+  html+='<tr class="total-row"><td colspan="4">TOTAL</td><td>$'+total.toFixed(2)+'</td><td colspan="2"></td></tr></tbody></table>';
+  if(regTotal>0){
+    html+='<h2>CGA ARP — Regular Charges</h2><table><thead><tr><th>Description</th><th>Account</th><th>Cost Center</th><th>Segment</th><th>Billing</th><th>Amount</th></tr></thead><tbody>';
+    Object.values(arpGroups).forEach(function(g){html+='<tr><td>'+g.vendors.slice(0,2).join(', ')+'</td><td>'+(g.account||'')+'</td><td>'+(g.cc||'')+'</td><td>'+(g.seg||'')+'</td><td>'+(g.bc||'')+'</td><td style="font-weight:bold">$'+g.total.toFixed(2)+'</td></tr>';});
+    html+='<tr class="total-row"><td colspan="5">REGULAR TOTAL</td><td>$'+regTotal.toFixed(2)+'</td></tr></tbody></table>';
+  }
+  var withPhotos=receipts.filter(function(r){return r.photo;});
+  if(withPhotos.length>0){
+    html+='<div class="page-break"></div><h2>Receipt Images</h2><div class="photo-grid">';
+    withPhotos.forEach(function(r){html+='<div class="photo-item"><img src="'+r.photo+'" alt="'+r.vendor+'"><div class="photo-caption">'+r.vendor+' · $'+parseFloat(r.amount||0).toFixed(2)+' · '+fmtDate(r.date)+'</div></div>';});
+    html+='</div>';
+  }
+  html+='</body></html>';
+  var win=window.open('','_blank');win.document.write(html);win.document.close();
+  setTimeout(function(){win.print();},500);
+  showToast('PDF ready — save to iCloud Submitted folder');
+}
+
+async function readStatement(input){
+  if(!input.files||!input.files[0])return;
+  var file=input.files[0];
+  var zone=document.getElementById('statementZone');
+  zone.classList.add('has-file');
+  zone.innerHTML='<div style="font-size:48px;margin-bottom:10px">⏳</div><div style="font-size:16px;font-weight:700;color:var(--navy)">Reading Statement...</div>';
+  var reader=new FileReader();
+  reader.onload=async function(e){
+    var base64=e.target.result.split(',')[1];
+    var mimeType=file.type||'image/jpeg';
+    var receiptSummary=receipts.map(function(r){return r.vendor+' $'+parseFloat(r.amount||0).toFixed(2)+' on '+r.date;}).join('
+');
+    try{
+      var msgContent=[];
+      if(mimeType==='application/pdf'){msgContent.push({type:'document',source:{type:'base64',media_type:'application/pdf',data:base64}});}
+      else{msgContent.push({type:'image',source:{type:'base64',media_type:'image/jpeg',data:base64}});}
+      msgContent.push({type:'text',text:'This is a Bank of America credit card statement. Extract all transactions and compare against these logged receipts:
+
+'+receiptSummary+'
+
+Return JSON only: {"missing":[{"vendor":"","date":"","amount":""}],"matched":[{"vendor":"","date":"","amount":""}]}. Missing = on statement but NOT in receipts. Matched = found in both.'});
+      var resp=await fetch('/.netlify/functions/anthropic',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1000,messages:[{role:'user',content:msgContent}]})});
+      var data=await resp.json();
+      if(data.content&&data.content[0]){
+        var text=data.content[0].text.trim().replace(/```json|```/g,'').trim();
+        try{showStatementResults(JSON.parse(text));zone.innerHTML='<div style="font-size:48px;margin-bottom:10px">✅</div><div style="font-size:16px;font-weight:700;color:var(--navy)">Statement Read</div>';}
+        catch(e){showToast('Could not parse statement');}
+      }
+    }catch(e){showToast('Error: '+e.message);}
+  };
+  reader.readAsDataURL(file);
+}
+
+function showStatementResults(data){
+  var results=document.getElementById('statementResults');
+  var list=document.getElementById('missingList');
+  results.style.display='block';
+  var html='';
+  if((data.missing||[]).length>0){
+    html+='<div style="font-size:11px;font-weight:700;color:var(--response);letter-spacing:1px;text-transform:uppercase;margin-bottom:8px">⚠️ Missing from CC Log</div>';
+    data.missing.forEach(function(item){html+='<div class="missing-item"><div><div class="missing-vendor">'+item.vendor+'</div><div class="missing-date">'+item.date+'</div></div><div class="missing-amount">$'+parseFloat(item.amount||0).toFixed(2)+'</div></div>';});
+  }
+  if((data.matched||[]).length>0){
+    html+='<div style="font-size:11px;font-weight:700;color:var(--green);letter-spacing:1px;text-transform:uppercase;margin:12px 0 8px">✅ Matched</div>';
+    data.matched.forEach(function(item){html+='<div class="missing-item match-item"><div><div class="missing-vendor">'+item.vendor+'</div><div class="missing-date">'+item.date+'</div></div><div class="missing-amount" style="color:var(--green)">$'+parseFloat(item.amount||0).toFixed(2)+'</div></div>';});
+  }
+  if(!html)html='<div class="empty-state"><div class="empty-title">All charges accounted for ✅</div></div>';
+  list.innerHTML=html;
+}
+
+function exportJSON(){
+  if(receipts.length===0){showToast('No receipts to export');return;}
+  var obj={exportedAt:new Date().toISOString(),cardHolder:'Chris DeMaskey',card:'0848',company:'Clean Gulf Associates',receipts:receipts.map(function(r){var c=Object.assign({},r);delete c.photo;return c;})};
+  var blob=new Blob([JSON.stringify(obj,null,2)],{type:'application/json'});
+  var url=URL.createObjectURL(blob);
+  var a=document.createElement('a');a.href=url;a.download='CGA_Receipts_'+new Date().toISOString().slice(0,7)+'.json';a.click();
+  URL.revokeObjectURL(url);showToast('JSON exported');
+}
+
+function exportCSV(){
+  if(receipts.length===0){showToast('No receipts to export');return;}
+  var headers=['Date','Vendor','Items','To Be Used For','Amount','Account','Cost Center','Segment','Response','Job','Notes'];
+  var rows=receipts.map(function(r){return[r.date,r.vendor,r.items||'',r.usedfor||'',parseFloat(r.amount||0).toFixed(2),r.isResponse?'':r.account||'',r.isResponse?'':r.cc||'',r.isResponse?'':r.seg||'',r.isResponse?'Yes':'No',r.isResponse?r.job||'':'',r.notes||''].map(function(v){return'"'+String(v).replace(/"/g,'""')+'"';}).join(',');});
+  var blob=new Blob([[headers.join(',')].concat(rows).join('
+')],{type:'text/csv'});
+  var url=URL.createObjectURL(blob);
+  var a=document.createElement('a');a.href=url;a.download='CGA_Receipts_'+new Date().toISOString().slice(0,7)+'.csv';a.click();
+  URL.revokeObjectURL(url);showToast('CSV exported');
+}
+
+function clearMonth(){
+  if(!confirm('Clear ALL receipts? Make sure you exported your PDF first.'))return;
+  receipts=[];save();renderList();updateExportSummary();showToast('Cleared — ready for new month');
+}
+
+function save(){
+  try{localStorage.setItem('cga_receipts',JSON.stringify(receipts));}
+  catch(e){var lean=receipts.map(function(r){var c=Object.assign({},r);delete c.photo;return c;});localStorage.setItem('cga_receipts',JSON.stringify(lean));showToast('Storage full — photos not saved');}
+}
+
+function today(){return new Date().toISOString().slice(0,10);}
+
+function fmtDate(d){
+  if(!d)return'';
+  try{return new Date(d+'T12:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});}
+  catch(e){return d;}
+}
+
+function showToast(msg){
+  var t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');
+  setTimeout(function(){t.classList.remove('show');},2800);
+}
+
+init();
+</script>
+</body>
+</html>
