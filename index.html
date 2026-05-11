@@ -609,12 +609,12 @@ async function testApiKey() {
   if (!key) { showToast('Save an API key first'); return; }
   showToast('Testing connection...');
   try {
-    var resp = await fetch('https://api.anthropic.com/v1/messages', {
+    var resp = await fetch('/.netlify/functions/anthropic', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'x-api-key': key,
-        'anthropic-version': '2023-06-01',
+        
+        
         'anthropic-dangerous-direct-browser-access': 'true'
       },
       body: JSON.stringify({
@@ -676,12 +676,12 @@ async function readReceiptWithAI(imgData, mimeType) {
   aiResult.textContent = '';
 
   try {
-    var resp = await fetch('https://api.anthropic.com/v1/messages', {
+    var resp = await fetch('/.netlify/functions/anthropic', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'x-api-key': getApiKey(),
-        'anthropic-version': '2023-06-01',
+        
+        
         'anthropic-dangerous-direct-browser-access': 'true'
       },
       body: JSON.stringify({
@@ -1148,12 +1148,12 @@ async function readStatement(input) {
     }).join('\n');
 
     try {
-      var resp = await fetch('https://api.anthropic.com/v1/messages', {
+      var resp = await fetch('/.netlify/functions/anthropic', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-api-key': getApiKey(),
-          'anthropic-version': '2023-06-01',
+          
+          
           'anthropic-dangerous-direct-browser-access': 'true'
         },
         body: JSON.stringify({
