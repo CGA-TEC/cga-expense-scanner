@@ -645,24 +645,35 @@ function attachAndReadPhoto(input) {
   var file = input.files[0];
   var reader = new FileReader();
   reader.onload = function(e) {
-    var base64 = e.target.result;
-    // Show preview
-    document.getElementById('photoImg').src = base64;
+    var originalBase64 = e.target.result;
+    // Show preview immediately
+    document.getElementById('photoImg').src = originalBase64;
     document.getElementById('photoImg').style.display = 'block';
     document.getElementById('attachArea').classList.add('has-photo');
     document.getElementById('attachLabel').textContent = '📷 Receipt Attached';
-    document.getElementById('attachSub').textContent = 'Tap to change';
-    // Store for saving
-    currentPhotoData = base64;
-    // Strip data URL prefix for API
-    var imgData = base64.split(',')[1];
-    var mimeType = file.type || 'image/jpeg';
-    // Read with AI
-    if (getApiKey()) {
-      readReceiptWithAI(imgData, mimeType);
-    } else {
-      showToast('Add API key in Settings to auto-fill');
-    }
+    document.getElementById('attachSub').textContent = 'Compressing...';
+    currentPhotoData = originalBase64;
+    // Compress image before sending to API
+    var img = new Image();
+    img.onload = function() {
+      var canvas = document.createElement('canvas');
+      var maxW = 1024;
+      var maxH = 1024;
+      var w = img.width;
+      var h = img.height;
+      if (w > maxW) { h = h * maxW / w; w = maxW; }
+      if (h > maxH) { w = w * maxH / h; h = maxH; }
+      canvas.width = w;
+      canvas.height = h;
+      var ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, w, h);
+      var compressed = canvas.toDataURL('image/jpeg', 0.7);
+      var imgData = compressed.split(',')[1];
+      document.getElementById('attachSub').textContent = 'Tap to change';
+      // Read with AI
+      readReceiptWithAI(imgData, 'image/jpeg');
+    };
+    img.src = originalBase64;
   };
   reader.readAsDataURL(file);
 }
