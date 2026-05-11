@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -200,7 +201,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--navy);color:var(--black);
 <div class="topbar">
   <div class="topbar-logo">
     <span class="topbar-badge">CGA</span>
-    <span class="topbar-title">Expense Scanner <span class="version">v2.1</span></span>
+    <span class="topbar-title">Expense Scanner <span class="version">v2.2</span></span>
   </div>
   <span class="topbar-count" id="topCount" onclick="switchTab('receipts')">0 receipts</span>
 </div>
@@ -647,37 +648,41 @@ async function testApiKey() {
 function attachAndReadPhoto(input) {
   if (!input.files || !input.files[0]) return;
   var file = input.files[0];
+  var mimeType = file.type || 'image/jpeg';
   var reader = new FileReader();
   reader.onload = function(e) {
     var originalBase64 = e.target.result;
-    // Show preview immediately
+    // Show preview
     document.getElementById('photoImg').src = originalBase64;
     document.getElementById('photoImg').style.display = 'block';
     document.getElementById('attachArea').classList.add('has-photo');
-    document.getElementById('attachLabel').textContent = '📷 Receipt Attached';
-    document.getElementById('attachSub').textContent = 'Compressing...';
+    document.getElementById('attachLabel').textContent = mimeType === 'application/pdf' ? '📄 PDF Attached' : '📷 Receipt Attached';
+    document.getElementById('attachSub').textContent = 'Tap to change';
     currentPhotoData = originalBase64;
-    // Compress image before sending to API
-    var img = new Image();
-    img.onload = function() {
-      var canvas = document.createElement('canvas');
-      var maxW = 1024;
-      var maxH = 1024;
-      var w = img.width;
-      var h = img.height;
-      if (w > maxW) { h = h * maxW / w; w = maxW; }
-      if (h > maxH) { w = w * maxH / h; h = maxH; }
-      canvas.width = w;
-      canvas.height = h;
-      var ctx = canvas.getContext('2d');
-      ctx.drawImage(img, 0, 0, w, h);
-      var compressed = canvas.toDataURL('image/jpeg', 0.7);
-      var imgData = compressed.split(',')[1];
-      document.getElementById('attachSub').textContent = 'Tap to change';
-      // Read with AI
-      readReceiptWithAI(imgData, 'image/jpeg');
-    };
-    img.src = originalBase64;
+    var fileData = originalBase64.split(',')[1];
+    
+    if (mimeType === 'application/pdf') {
+      // Send PDF directly — no compression needed
+      readReceiptWithAI(fileData, 'application/pdf');
+    } else {
+      // Compress image before sending
+      document.getElementById('attachSub').textContent = 'Compressing...';
+      var img = new Image();
+      img.onload = function() {
+        var canvas = document.createElement('canvas');
+        var maxW = 1024; var maxH = 1024;
+        var w = img.width; var h = img.height;
+        if (w > maxW) { h = h * maxW / w; w = maxW; }
+        if (h > maxH) { w = w * maxH / h; h = maxH; }
+        canvas.width = w; canvas.height = h;
+        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+        var compressed = canvas.toDataURL('image/jpeg', 0.7);
+        var imgData = compressed.split(',')[1];
+        document.getElementById('attachSub').textContent = 'Tap to change';
+        readReceiptWithAI(imgData, 'image/jpeg');
+      };
+      img.src = originalBase64;
+    }
   };
   reader.readAsDataURL(file);
 }
@@ -691,451 +696,71 @@ async function readReceiptWithAI(imgData, mimeType) {
   aiResult.textContent = '';
 
   try {
+    var messageContent = [];
+    
+    if (mimeType === 'application/pdf') {
+      messageContent.push({
+        type: 'document',
+        source: { type: 'base64', media_type: 'application/pdf', data: imgData }
+      });
+    } else {
+      var validMime = mimeType;
+      if (!['image/jpeg','image/png','image/gif','image/webp'].includes(mimeType)) {
+        validMime = 'image/jpeg';
+      }
+      messageContent.push({
+        type: 'image',
+        source: { type: 'base64', media_type: validMime, data: imgData }
+      });
+    }
+    
+    messageContent.push({
+      type: 'text',
+      text: 'This is a receipt. Extract ONLY these fields and return as JSON with no other text: {"vendor":"store name","date":"YYYY-MM-DD","amount":"number only no $","items":"brief description of what was purchased"}. If you cannot read a field return empty string. Return only the JSON object.'
+    });
+
     var resp = await fetch('/.netlify/functions/anthropic', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        
-        
-        'anthropic-dangerous-direct-browser-access': 'true'
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         model: 'claude-sonnet-4-20250514',
         max_tokens: 300,
-        messages: [{
-          role: 'user',
-          content: [
-            {
-              type: 'image',
-              source: { type: 'base64', media_type: mimeType, data: imgData }
-            },
-            {
-              type: 'text',
-              text: 'This is a receipt. Extract ONLY these fields and return as JSON with no other text: {"vendor":"store name","date":"YYYY-MM-DD","amount":"number only no $","items":"brief description of what was purchased"}. If you cannot read a field return empty string. Return only the JSON object.'
-            }
-          ]
-        }]
+        messages: [{ role: 'user', content: messageContent }]
       })
     });
 
     var data = await resp.json();
+    console.log('API response:', JSON.stringify(data).slice(0,300));
+    
     if (data.content && data.content[0] && data.content[0].text) {
       var text = data.content[0].text.trim();
-      // Clean up any markdown
       text = text.replace(/```json|```/g,'').trim();
       try {
         var parsed = JSON.parse(text);
-        // Auto-fill fields
-        if (parsed.vendor) {
-          document.getElementById('f_vendor').value = parsed.vendor;
-          document.getElementById('f_vendor').classList.add('ai-filled');
-        }
-        if (parsed.date) {
-          document.getElementById('f_date').value = parsed.date;
-          document.getElementById('f_date').classList.add('ai-filled');
-        }
-        if (parsed.amount) {
-          document.getElementById('f_amount').value = parseFloat(parsed.amount).toFixed(2);
-          document.getElementById('f_amount').classList.add('ai-filled');
-        }
-        if (parsed.items) {
-          document.getElementById('f_items').value = parsed.items;
-          document.getElementById('f_items').classList.add('ai-filled');
-        }
+        if (parsed.vendor) { document.getElementById('f_vendor').value = parsed.vendor; document.getElementById('f_vendor').classList.add('ai-filled'); }
+        if (parsed.date) { document.getElementById('f_date').value = parsed.date; document.getElementById('f_date').classList.add('ai-filled'); }
+        if (parsed.amount) { document.getElementById('f_amount').value = parseFloat(parsed.amount).toFixed(2); document.getElementById('f_amount').classList.add('ai-filled'); }
+        if (parsed.items) { document.getElementById('f_items').value = parsed.items; document.getElementById('f_items').classList.add('ai-filled'); }
         aiStatus.textContent = '✅ Fields auto-filled — review and confirm';
-        aiResult.textContent = parsed.vendor + ' · $' + parsed.amount + ' · ' + parsed.date;
+        aiResult.textContent = (parsed.vendor||'') + ' · $' + (parsed.amount||'0') + ' · ' + (parsed.date||'');
       } catch(e) {
         aiStatus.textContent = '⚠️ Could not parse — fill in manually';
         aiResult.textContent = text;
       }
+    } else if (data.error) {
+      aiStatus.textContent = '❌ ' + (data.error.message || 'API error');
+      console.error('API error:', data.error);
     } else {
       aiStatus.textContent = '⚠️ No response — fill in manually';
+      console.log('Full response:', JSON.stringify(data));
     }
   } catch(e) {
-    aiStatus.textContent = '❌ Error reading receipt — fill in manually';
-    console.error(e);
+    aiStatus.textContent = '❌ Error: ' + e.message;
+    console.error('Fetch error:', e);
   }
 }
 
-// ═══════════════════════════════════════════════════════
-// MODAL OPEN / CLOSE
-// ═══════════════════════════════════════════════════════
-function openNew() {
-  currentId = Date.now().toString();
-  currentPhotoData = null;
-  isResponse = false;
-  document.getElementById('modalTitle').textContent = 'New Receipt';
-  document.getElementById('modalSub').textContent = 'Scan or attach a receipt — AI will read it';
-  clearForm();
-  updateToggleUI();
-  document.getElementById('codeModal').classList.add('open');
-  switchTab('receipts');
-}
 
-function openEdit(id) {
-  var r = receipts.find(function(x){return x.id===id;});
-  if (!r) return;
-  currentId = id;
-  currentPhotoData = r.photo || null;
-  isResponse = r.isResponse || false;
-  document.getElementById('modalTitle').textContent = 'Edit Receipt';
-  document.getElementById('modalSub').textContent = r.vendor || 'Edit receipt details';
-  document.getElementById('f_vendor').value = r.vendor || '';
-  document.getElementById('f_date').value = r.date || today();
-  document.getElementById('f_amount').value = r.amount || '';
-  document.getElementById('f_items').value = r.items || '';
-  document.getElementById('f_usedfor').value = r.usedfor || '';
-  document.getElementById('f_account').value = r.account || '';
-  document.getElementById('f_cc').value = r.cc || '';
-  document.getElementById('f_seg').value = r.seg || '';
-  document.getElementById('f_job').value = r.job || '';
-  document.getElementById('f_bc_regular').value = r.bc || '';
-  document.getElementById('f_spill').value = r.spill || '';
-  document.getElementById('f_bc').value = r.bc || '05';
-  document.getElementById('f_notes').value = r.notes || '';
-  document.getElementById('aiReading').style.display = 'none';
-  if (r.photo) {
-    document.getElementById('photoImg').src = r.photo;
-    document.getElementById('photoImg').style.display = 'block';
-    document.getElementById('attachArea').classList.add('has-photo');
-    document.getElementById('attachLabel').textContent = '📷 Receipt Attached';
-    document.getElementById('attachSub').textContent = 'Tap to change';
-  } else {
-    document.getElementById('photoImg').style.display = 'none';
-    document.getElementById('attachArea').classList.remove('has-photo');
-    document.getElementById('attachLabel').textContent = 'Tap to Scan Receipt';
-    document.getElementById('attachSub').textContent = 'Use iPhone document scan or camera';
-  }
-  updateToggleUI();
-  document.getElementById('codeModal').classList.add('open');
-}
-
-function closeModal() {
-  document.getElementById('codeModal').classList.remove('open');
-}
-
-function clearForm() {
-  document.getElementById('f_vendor').value = '';
-  document.getElementById('f_date').value = today();
-  document.getElementById('f_amount').value = '';
-  document.getElementById('f_items').value = '';
-  document.getElementById('f_usedfor').value = '';
-  document.getElementById('f_account').value = '';
-  document.getElementById('f_cc').value = '';
-  document.getElementById('f_seg').value = '';
-  document.getElementById('f_job').value = '';
-  document.getElementById('f_bc_regular').value = '';
-  document.getElementById('f_spill').value = '';
-  document.getElementById('f_bc').value = '05';
-  document.getElementById('f_notes').value = '';
-  document.getElementById('photoInput').value = '';
-  document.getElementById('photoImg').src = '';
-  document.getElementById('photoImg').style.display = 'none';
-  document.getElementById('attachArea').classList.remove('has-photo');
-  document.getElementById('attachLabel').textContent = 'Tap to Scan Receipt';
-  document.getElementById('attachSub').textContent = 'Use iPhone document scan or camera';
-  document.getElementById('aiReading').style.display = 'none';
-  // Remove AI fill highlights
-  ['f_vendor','f_date','f_amount','f_items'].forEach(function(id){
-    document.getElementById(id).classList.remove('ai-filled');
-  });
-}
-
-// ═══════════════════════════════════════════════════════
-// TOGGLE
-// ═══════════════════════════════════════════════════════
-function toggleResponse() {
-  isResponse = !isResponse;
-  updateToggleUI();
-}
-
-function updateToggleUI() {
-  var toggle = document.getElementById('responseToggle');
-  var sw = document.getElementById('toggleSwitch');
-  var saveBtn = document.getElementById('saveBtn');
-  if (isResponse) {
-    toggle.classList.add('active');
-    sw.classList.add('on');
-    document.getElementById('toggleTitle').textContent = 'Response Charge';
-    document.getElementById('toggleSub').textContent = 'Goes on CGAS Response ARP (97xxxx)';
-    document.getElementById('regularFields').style.display = 'none';
-    document.getElementById('responseFields').style.display = 'block';
-    saveBtn.classList.add('response-save');
-  } else {
-    toggle.classList.remove('active');
-    sw.classList.remove('on');
-    document.getElementById('toggleTitle').textContent = 'Regular Expense';
-    document.getElementById('toggleSub').textContent = 'Goes on standard CGA ARP';
-    document.getElementById('regularFields').style.display = 'block';
-    document.getElementById('responseFields').style.display = 'none';
-    saveBtn.classList.remove('response-save');
-  }
-}
-
-function onAcctChange() {
-  var acct = document.getElementById('f_account').value;
-  if (acct) document.getElementById('f_seg').value = '00';
-}
-
-// ═══════════════════════════════════════════════════════
-// SAVE RECEIPT
-// ═══════════════════════════════════════════════════════
-function saveReceipt() {
-  var vendor = document.getElementById('f_vendor').value.trim();
-  var amount = document.getElementById('f_amount').value.trim();
-  if (!vendor) { showToast('Please enter a vendor name'); return; }
-  if (!amount) { showToast('Please enter an amount'); return; }
-
-  var receipt = {
-    id: currentId,
-    scannedAt: new Date().toISOString(),
-    vendor: vendor,
-    date: document.getElementById('f_date').value,
-    amount: amount,
-    items: document.getElementById('f_items').value.trim(),
-    usedfor: document.getElementById('f_usedfor').value.trim(),
-    isResponse: isResponse,
-    coded: true,
-    account: isResponse ? '' : document.getElementById('f_account').value,
-    cc: isResponse ? '' : document.getElementById('f_cc').value,
-    seg: isResponse ? '' : document.getElementById('f_seg').value,
-    job: isResponse ? document.getElementById('f_job').value.trim() : '',
-    spill: isResponse ? document.getElementById('f_spill').value : '',
-    bc: isResponse ? document.getElementById('f_bc').value : document.getElementById('f_bc_regular').value,
-    notes: document.getElementById('f_notes').value.trim(),
-    photo: currentPhotoData
-  };
-
-  var idx = receipts.findIndex(function(r){return r.id===receipt.id;});
-  if (idx >= 0) receipts[idx] = receipt;
-  else receipts.unshift(receipt);
-
-  save();
-  closeModal();
-  renderList();
-  updateExportSummary();
-  showToast(isResponse ? 'Response receipt saved ✅' : 'Receipt saved ✅');
-}
-
-// ═══════════════════════════════════════════════════════
-// DELETE
-// ═══════════════════════════════════════════════════════
-function deleteReceipt(id) {
-  if (!confirm('Delete this receipt?')) return;
-  receipts = receipts.filter(function(r){return r.id!==id;});
-  save();
-  renderList();
-  updateExportSummary();
-  showToast('Deleted');
-}
-
-// ═══════════════════════════════════════════════════════
-// RENDER LIST
-// ═══════════════════════════════════════════════════════
-function renderList() {
-  var list = document.getElementById('receiptList');
-  var count = receipts.length;
-  document.getElementById('topCount').textContent = count + ' receipt' + (count!==1?'s':'');
-  document.getElementById('summaryBar').style.display = count > 0 ? 'flex' : 'none';
-
-  if (count > 0) {
-    var total = receipts.reduce(function(s,r){return s+parseFloat(r.amount||0);},0);
-    document.getElementById('sumTotal').textContent = '$'+total.toFixed(2);
-    document.getElementById('sumCoded').textContent = receipts.filter(function(r){return r.coded;}).length;
-    document.getElementById('sumResponse').textContent = receipts.filter(function(r){return r.isResponse;}).length;
-  }
-
-  if (count === 0) {
-    list.innerHTML = '<div class="empty-state"><div class="empty-icon">🧾</div><div class="empty-title">No receipts yet</div><div class="empty-sub">Tap Scan Receipt to get started</div></div>';
-    return;
-  }
-
-  list.innerHTML = receipts.map(function(r) {
-    var acctLabel = r.isResponse
-      ? (r.spill ? 'Spill: '+r.spill+(r.job?' · Job: '+r.job:'') : 'Response — needs coding')
-      : (r.account ? r.account+' / '+(r.cc||'no CC') : 'Needs coding');
-    var aiTag = r.photo ? '<span class="tag tag-ai">📷 Photo</span>' : '';
-    var statusTag = r.coded ? '<span class="tag tag-coded">Coded</span>' : '<span class="tag tag-uncoded">Needs Coding</span>';
-    var responseTag = r.isResponse ? '<span class="tag tag-response">Response</span>' : '';
-    return '<div class="receipt-card '+(r.isResponse?'response-card':'regular-card')+'">'
-      +'<div class="receipt-card-header">'
-      +'<div class="receipt-vendor">'+r.vendor+'</div>'
-      +'<div class="receipt-amount">$'+parseFloat(r.amount||0).toFixed(2)+'</div>'
-      +'</div>'
-      +'<div class="receipt-meta">'
-      +'<span class="receipt-date">'+fmtDate(r.date)+'</span>'
-      +statusTag+responseTag+aiTag
-      +'</div>'
-      +(r.items?'<div style="font-size:12px;color:var(--gray);margin-top:5px">'+r.items+(r.usedfor?' — '+r.usedfor:'')+'</div>':'')
-      +(r.coded?'<div style="font-size:11px;color:var(--teal-dark);margin-top:3px">'+acctLabel+'</div>':'')
-      +'<div class="receipt-card-footer">'
-      +'<button class="btn-sm btn-code" onclick="openEdit(\''+r.id+'\')">'+(r.coded?'✏️ Edit':'Code')+'</button>'
-      +'<button class="btn-sm btn-delete" onclick="deleteReceipt(\''+r.id+'\')">🗑️ Delete</button>'
-      +'</div></div>';
-  }).join('');
-}
-
-// ═══════════════════════════════════════════════════════
-// EXPORT SUMMARY
-// ═══════════════════════════════════════════════════════
-function updateExportSummary() {
-  var total = receipts.reduce(function(s,r){return s+parseFloat(r.amount||0);},0);
-  var respTotal = receipts.filter(function(r){return r.isResponse;}).reduce(function(s,r){return s+parseFloat(r.amount||0);},0);
-  var now = new Date();
-  var periodStart = new Date(now.getFullYear(), now.getMonth()-1, 28);
-  var periodEnd = new Date(now.getFullYear(), now.getMonth(), 27);
-  document.getElementById('exportPeriod').textContent = fmtDate(periodStart.toISOString().slice(0,10)) + ' – ' + fmtDate(periodEnd.toISOString().slice(0,10));
-  document.getElementById('exportCount').textContent = receipts.length;
-  document.getElementById('exportTotal').textContent = '$'+total.toFixed(2);
-  document.getElementById('exportRegular').textContent = '$'+(total-respTotal).toFixed(2);
-  document.getElementById('exportResponse').textContent = '$'+respTotal.toFixed(2);
-}
-
-// ═══════════════════════════════════════════════════════
-// GENERATE PDF
-// ═══════════════════════════════════════════════════════
-function generatePDF() {
-  if (receipts.length === 0) { showToast('No receipts to export'); return; }
-
-  var now = new Date();
-  var monthName = now.toLocaleDateString('en-US', {month:'long', year:'numeric'});
-  var total = receipts.reduce(function(s,r){return s+parseFloat(r.amount||0);},0);
-  var respTotal = receipts.filter(function(r){return r.isResponse;}).reduce(function(s,r){return s+parseFloat(r.amount||0);},0);
-  var regTotal = total - respTotal;
-
-  // Group regular receipts by account+CC for ARP
-  var arpGroups = {};
-  receipts.filter(function(r){return !r.isResponse;}).forEach(function(r) {
-    var key = (r.account||'UNCODED') + '|' + (r.cc||'NOCC');
-    if (!arpGroups[key]) arpGroups[key] = {account:r.account, cc:r.cc, seg:r.seg, bc:r.bc, total:0, vendors:[]};
-    arpGroups[key].total += parseFloat(r.amount||0);
-    arpGroups[key].vendors.push(r.vendor);
-  });
-
-  var html = '<!DOCTYPE html><html><head><meta charset="UTF-8">';
-  html += '<style>';
-  html += 'body{font-family:Arial,sans-serif;font-size:11px;color:#1A1A1A;margin:0;padding:20px}';
-  html += 'h1{font-size:18px;color:#0D2B3E;margin:0 0 4px}';
-  html += 'h2{font-size:13px;color:#0D2B3E;margin:20px 0 8px;border-bottom:2px solid #00A9B5;padding-bottom:4px}';
-  html += '.header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px}';
-  html += '.badge{background:#00A9B5;color:white;font-weight:bold;font-size:14px;padding:6px 12px;border-radius:6px}';
-  html += 'table{width:100%;border-collapse:collapse;margin-bottom:16px}';
-  html += 'th{background:#0D2B3E;color:white;padding:8px 6px;text-align:left;font-size:10px}';
-  html += 'td{padding:6px;border-bottom:1px solid #E5EBF0;font-size:10px}';
-  html += 'tr:nth-child(even)td{background:#F0F4F7}';
-  html += '.total-row td{font-weight:bold;background:#E6F7F8;border-top:2px solid #00A9B5}';
-  html += '.response-row td{background:#FEF0E6}';
-  html += '.summary{background:#F0F4F7;border-radius:8px;padding:12px;margin-bottom:16px;display:flex;gap:20px}';
-  html += '.sum-item{flex:1;text-align:center}';
-  html += '.sum-num{font-size:18px;font-weight:bold;color:#0D2B3E}';
-  html += '.sum-label{font-size:9px;color:#8A9AAA;text-transform:uppercase;letter-spacing:0.8px}';
-  html += '.photo-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:8px}';
-  html += '.photo-item{text-align:center}';
-  html += '.photo-item img{width:100%;border-radius:6px;border:1px solid #E5EBF0}';
-  html += '.photo-caption{font-size:9px;color:#8A9AAA;margin-top:3px}';
-  html += '.page-break{page-break-before:always}';
-  html += '@media print{body{padding:10px}}';
-  html += '</style></head><body>';
-
-  // HEADER
-  html += '<div class="header">';
-  html += '<div><h1>CGA Expense Report</h1><div style="color:#8A9AAA;font-size:11px">'+monthName+' · Chris DeMaskey · Card ending 0848</div></div>';
-  html += '<span class="badge">CGA</span>';
-  html += '</div>';
-
-  // SUMMARY
-  html += '<div class="summary">';
-  html += '<div class="sum-item"><div class="sum-num">'+receipts.length+'</div><div class="sum-label">Receipts</div></div>';
-  html += '<div class="sum-item"><div class="sum-num">$'+total.toFixed(2)+'</div><div class="sum-label">Total</div></div>';
-  html += '<div class="sum-item"><div class="sum-num">$'+regTotal.toFixed(2)+'</div><div class="sum-label">Regular ARP</div></div>';
-  html += '<div class="sum-item"><div class="sum-num">$'+respTotal.toFixed(2)+'</div><div class="sum-label">Response ARP</div></div>';
-  html += '</div>';
-
-  // CC LOG TABLE
-  html += '<h2>CC Log — All Charges</h2>';
-  html += '<table><thead><tr><th>Date</th><th>Vendor</th><th>Items</th><th>Used For</th><th>Amount</th><th>Account</th><th>Cost Center</th></tr></thead><tbody>';
-  receipts.forEach(function(r) {
-    var rowClass = r.isResponse ? ' class="response-row"' : '';
-    html += '<tr'+rowClass+'>';
-    html += '<td>'+fmtDate(r.date)+'</td>';
-    html += '<td>'+r.vendor+'</td>';
-    html += '<td>'+(r.items||'')+'</td>';
-    html += '<td>'+(r.usedfor||'')+'</td>';
-    html += '<td style="font-weight:bold">$'+parseFloat(r.amount||0).toFixed(2)+'</td>';
-    html += '<td>'+(r.isResponse?('Spill: '+(r.spill||'')):(r.account||''))+'</td>';
-    html += '<td>'+(r.isResponse?('Job: '+(r.job||'')):(r.cc||''))+'</td>';
-    html += '</tr>';
-  });
-  html += '<tr class="total-row"><td colspan="4">TOTAL</td><td>$'+total.toFixed(2)+'</td><td colspan="2"></td></tr>';
-  html += '</tbody></table>';
-
-  // ARP SECTION - Regular
-  if (regTotal > 0) {
-    html += '<h2>CGA ARP — Regular Charges Distribution</h2>';
-    html += '<table><thead><tr><th>Description</th><th>Account</th><th>Cost Center</th><th>Segment</th><th>Billing</th><th>Amount</th></tr></thead><tbody>';
-    Object.values(arpGroups).forEach(function(g) {
-      html += '<tr>';
-      html += '<td>'+g.vendors.slice(0,2).join(', ')+(g.vendors.length>2?' +more':'')+'</td>';
-      html += '<td>'+(g.account||'')+'</td>';
-      html += '<td>'+(g.cc||'')+'</td>';
-      html += '<td>'+(g.seg||'')+'</td>';
-      html += '<td>'+(g.bc||'')+'</td>';
-      html += '<td style="font-weight:bold">$'+g.total.toFixed(2)+'</td>';
-      html += '</tr>';
-    });
-    html += '<tr class="total-row"><td colspan="5">REGULAR TOTAL</td><td>$'+regTotal.toFixed(2)+'</td></tr>';
-    html += '</tbody></table>';
-  }
-
-  // ARP SECTION - Response
-  var respReceipts = receipts.filter(function(r){return r.isResponse;});
-  if (respReceipts.length > 0) {
-    html += '<h2 style="color:var(--response)">CGAS Response ARP</h2>';
-    html += '<table><thead><tr><th>Date</th><th>Vendor</th><th>Items</th><th>Job #</th><th>Spill Account</th><th>Billing</th><th>Amount</th></tr></thead><tbody>';
-    respReceipts.forEach(function(r) {
-      html += '<tr class="response-row">';
-      html += '<td>'+fmtDate(r.date)+'</td>';
-      html += '<td>'+r.vendor+'</td>';
-      html += '<td>'+(r.items||'')+'</td>';
-      html += '<td>'+(r.job||'')+'</td>';
-      html += '<td>'+(r.spill||'')+'</td>';
-      html += '<td>'+(r.bc||'')+'</td>';
-      html += '<td style="font-weight:bold">$'+parseFloat(r.amount||0).toFixed(2)+'</td>';
-      html += '</tr>';
-    });
-    html += '<tr class="total-row"><td colspan="6">RESPONSE TOTAL</td><td>$'+respTotal.toFixed(2)+'</td></tr>';
-    html += '</tbody></table>';
-  }
-
-  // RECEIPT PHOTOS
-  var withPhotos = receipts.filter(function(r){return r.photo;});
-  if (withPhotos.length > 0) {
-    html += '<div class="page-break"></div>';
-    html += '<h2>Receipt Images</h2>';
-    html += '<div class="photo-grid">';
-    withPhotos.forEach(function(r) {
-      html += '<div class="photo-item">';
-      html += '<img src="'+r.photo+'" alt="'+r.vendor+'">';
-      html += '<div class="photo-caption">'+r.vendor+' · $'+parseFloat(r.amount||0).toFixed(2)+' · '+fmtDate(r.date)+'</div>';
-      html += '</div>';
-    });
-    html += '</div>';
-  }
-
-  html += '</body></html>';
-
-  // Open print window
-  var win = window.open('','_blank');
-  win.document.write(html);
-  win.document.close();
-  win.focus();
-  setTimeout(function(){ win.print(); }, 500);
-  showToast('PDF ready — save to iCloud Submitted folder');
-}
-
-// ═══════════════════════════════════════════════════════
-// BOA STATEMENT CHECKER
-// ═══════════════════════════════════════════════════════
 async function readStatement(input) {
   if (!input.files || !input.files[0]) return;
   var file = input.files[0];
